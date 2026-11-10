@@ -487,31 +487,73 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
   {n:'Туалет',r:[270,10,40,56],act:()=>say(null,['* Снова.','* Тело не спрашивает, удобно ли мне сейчас.','* Но теперь у меня есть курс.'])},
   {n:'Дверь',r:[136,222,48,24],act:()=>say(null,['* Хватит дорог на сегодня.'])}
  ]:[
-  {n:'Кровать',r:[16,58,96,80],act:async()=>{
+  {n:'Кровать',r:[16,58,96,62],act:async()=>{
     const i=await choose(['Осмотреть кровать','Снова завернуться в одеяло','Отойти']);
     if(i===0)await say(null,L.bed);
     else if(i===1){F.hid=true;S.pose='lie';await sleep(300);await say(null,['* Я снова заворачиваюсь в одеяло.']);await say(null,L.hideN);await say('Руслан',L.hideR);S.pose='stand';S.px=124;S.py=150;S.dir='left';}}},
   {n:'Бутылка воды',r:[108,40,28,58],on:()=>!F.bag.water,act:async()=>{
-    await say(null,L.drinkN);await say('Руслан',L.drinkR);F.drank=true;quest(4);F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();}},
+    if(!F.q[4]){
+      const i=await choose(['Выпить и взять бутылку в сумку','Только выпить','Потом']);
+      if(i===2){await say(null,['* Бутылка остаётся на тумбочке. Я могу взять её позже.']);return;}
+      await say(null,L.drinkN);await say('Руслан',L.drinkR);F.drank=true;quest(4);
+      if(i===0){F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();}
+      else await say(null,['* Воду я выпила. Пустую бутылку пока оставляю — в сумку можно положить потом.']);
+      return;
+    }
+    const j=await choose(['Взять бутылку в сумку','Потом']);
+    if(j===0){F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();}
+    else await say(null,['* Ладно. Возьму позже.']);}},
   {n:'Тумбочка',r:[108,56,28,42],on:()=>F.bag.water,act:()=>say(null,['* Пустая тумбочка. Бутылка уже в сумке.'])},
   {n:'Полочка',r:[124,26,54,40],act:async()=>{
     if(!F.q[3]){await say(null,L.shelf);quest(3);F.foundMeds=true;return;}
     if(!F.bag.meds){const i=await choose(['Взять ибупрофен и фурагин в дорогу','Оставить']);if(i===0){F.bag.meds=true;await say(null,['* Ибупрофен и почти пустой фурагин — в сумку. На всякий случай.']);}}
     else await say(null,['* Полочка пустая. Всё, что было, у меня в сумке.']);}},
   {n:'Окно',r:[184,10,62,56],act:()=>say(null,L.window)},
-  {n:'Стол',r:[224,88,82,42],act:async()=>{
-    if(!F.bag.docs){F.bag.docs=true;await say(null,['* На столе документы, телефон, зарядка и кошелёк.','* Всё это — в сумку.']);await checkBag();}
-    else await say(null,['* На столе пусто. Только кружка со вчерашнего вечера.']);}},
-  {n:'Стул',r:[248,104,32,36],act:async()=>{
-    if(!F.bag.sweater){F.bag.sweater=true;await say(null,['* На спинке стула тёплая кофта. Беру — в сумку.']);await checkBag();}
-    else await say(null,['* Обычный стул. Кофта уже в сумке.']);}},
+  {n:'Стол',r:[224,86,78,40],act:async()=>{
+    if(!F.bag.docs){
+      await say(null,['* На столе документы, телефон, зарядка и кошелёк.']);
+      const i=await choose(['Взять в сумку сейчас','Потом']);
+      if(i===0){F.bag.docs=true;await say(null,['* Всё это — в сумку.']);await checkBag();}
+      else await say(null,['* Оставляю на столе. Могу взять позже.']);
+    } else await say(null,['* На столе пусто. Только кружка со вчерашнего вечера.']);}},
+  {n:'Стул',r:[248,128,32,26],act:async()=>{
+    if(!F.bag.sweater){
+      await say(null,['* На спинке стула тёплая кофта.']);
+      const i=await choose(['Взять в сумку сейчас','Потом']);
+      if(i===0){F.bag.sweater=true;await say(null,['* Беру — в сумку.']);await checkBag();}
+      else await say(null,['* Кофта пока на стуле. Возьму позже.']);
+    } else await say(null,['* Обычный стул. Кофта уже в сумке.']);}},
   {n:'Сумка',r:[52,122,34,30],act:async()=>{
-    if(F.q[5]){await say(null,['* Сумка собрана: документы, телефон, зарядка, кошелёк, вода, тёплая кофта.']);return;}
+    if(F.q[5]||hasAll()){await checkBag();await say(null,['* Сумка собрана: документы, телефон, зарядка, кошелёк, вода, тёплая кофта.']);return;}
     await say(null,L.bagEmpty);const m=[];if(!F.bag.docs)m.push('документы, телефон, зарядка, кошелёк — на столе');if(!F.bag.water)m.push('вода — на тумбочке');if(!F.bag.sweater)m.push('тёплая кофта — на стуле');
-    if(m.length)await say(null,['* Мне ещё нужно взять: '+m.join('; ')+'.']);}},
+    if(m.length)await say(null,['* Мне ещё нужно взять: '+m.join('; ')+'.']);
+    const opts=[];
+    if(!F.bag.docs)opts.push('Взять документы со стола');
+    if(!F.bag.water)opts.push('Взять воду с тумбочки');
+    if(!F.bag.sweater)opts.push('Взять кофту со стула');
+    opts.push('Потом');
+    const i=await choose(opts);
+    const pick=opts[i];
+    if(pick==='Взять документы со стола'){F.bag.docs=true;await say(null,['* Документы, телефон, зарядка и кошелёк — в сумку.']);await checkBag();}
+    else if(pick==='Взять воду с тумбочки'){
+      if(!F.q[4]){await say(null,L.drinkN);await say('Руслан',L.drinkR);F.drank=true;quest(4);}
+      F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();
+    } else if(pick==='Взять кофту со стула'){F.bag.sweater=true;await say(null,['* Тёплую кофту — в сумку.']);await checkBag();}
+    else await say(null,['* Ничего страшного. Могу собрать это и позже.']);}},
   {n:'Дверь в туалет',r:[270,10,40,56],act:()=>go('bath',160,214,'up')},
   {n:'Входная дверь',r:[136,222,48,24],act:async()=>{
-    if(!(F.q[1]&&F.q[2]&&F.q[3]&&F.q[4]&&F.q[5])){await say(null,L.doorEarly);await say('Руслан',L.doorRus);return;}
+    if(hasAll()&&!F.q[5])await checkBag();
+    if(!(F.q[1]&&F.q[2]&&F.q[3]&&F.q[4]&&F.q[5])){
+      await say(null,L.doorEarly);await say('Руслан',L.doorRus);
+      const need=[];
+      if(!F.q[1])need.push('поговорить с Русланом');
+      if(!F.q[2])need.push('сходить в туалет');
+      if(!F.q[3])need.push('найти лекарства на полочке');
+      if(!F.q[4])need.push('выпить воды');
+      if(!F.q[5])need.push('собрать вещи в сумку');
+      await say(null,['* Ещё нужно: '+need.join(', ')+'.']);
+      return;
+    }
     quest(6);await go('corr',30,150,'right');}}
  ],
  rusAct:async()=>{
@@ -690,8 +732,14 @@ function blocked(x,y){const sc=SC[S.scene],b=sc.bounds;if(x-7<b[0]||x+7>b[0]+b[2
 function findTarget(){
  const sc=SC[S.scene];if(!sc.walk)return null;const v=DV[S.dir];const fx=S.px+v[0]*14,fy=S.py-4+v[1]*14;
  if(S.rus.vis&&S.rus.mode!=='hidden'&&sc.rusAct){const d1=Math.hypot(fx-S.rus.x,fy-(S.rus.y-8)),d2=Math.hypot(S.px-S.rus.x,S.py-S.rus.y);if(d1<16||d2<22)return{n:'Руслан',act:sc.rusAct};}
- for(const o of sc.objs())if((!o.on||o.on())&&rectHit(fx,fy,o.r))return o;
- return null;}
+ let best=null,bestD=1e9;
+ for(const o of sc.objs()){
+  if(o.on&&!o.on())continue;
+  if(!rectHit(fx,fy,o.r))continue;
+  const cx=o.r[0]+o.r[2]/2,cy=o.r[1]+o.r[3]/2,d=Math.hypot(fx-cx,fy-cy);
+  if(d<bestD){best=o;bestD=d;}
+ }
+ return best;}
 function interact(){const t=findTarget();if(t)run(t.act);}
 function startGame(){resetState();fadeEl.style.opacity=1;run(async()=>{
  S.scene='room';await fadeIn();await say(null,L.start);S.pose='stand';S.px=124;S.py=150;S.dir='left';S.control=true;$('hud').classList.remove('hidden');});}
