@@ -483,7 +483,7 @@ function drawTaxi(dawn){
 }
 
 /* ================= СЦЕНЫ: ЛОГИКА ================= */
-function hasAll(){const b=F.bag;return b.docs&&b.water&&b.sweater;}
+function hasAll(){const b=F.bag;return b.docs&&b.water;}
 async function checkBag(){if(!F.q[5]&&hasAll()){quest(5);await say('Руслан',L.packed);S.rus.pose='stand';S.rus.mode='follow';S.rus.y=146;S.trail=[];for(let i=0;i<20;i++)S.trail.push({x:S.rus.x,y:S.rus.y});}}
 const SC={};
 SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
@@ -539,7 +539,7 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
       else await say(null,['* Кофта пока на стуле. Возьму позже.']);
     } else await say(null,['* Обычный стул. Кофта уже в сумке.']);}},
   {n:'Сумка',r:[52,122,34,30],act:async()=>{
-    if(F.q[5]||hasAll()){await checkBag();await say(null,['* Сумка собрана: документы, телефон, зарядка, кошелёк, вода, тёплая кофта.']);return;}
+    if(F.q[5]||hasAll()){await checkBag();const extra=F.bag.sweater?' и тёплая кофта.':' . Кофту на стуле можно взять, если захочется — это не обязательно.';await say(null,['* Сумка собрана: документы, телефон, зарядка, кошелёк, вода'+extra]);return;}
     await say(null,L.bagEmpty);const m=[];if(!F.bag.docs)m.push('документы, телефон, зарядка, кошелёк — на столе');if(!F.bag.water)m.push('вода — на тумбочке');if(!F.bag.sweater)m.push('тёплая кофта — на стуле');
     if(m.length)await say(null,['* Мне ещё нужно взять: '+m.join('; ')+'.']);
     const opts=[];
@@ -565,7 +565,12 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
       if(!F.q[2])need.push('сходить в туалет');
       if(!F.q[3])need.push('найти лекарства на полочке');
       if(!F.q[4])need.push('выпить воды');
-      if(!F.q[5])need.push('собрать вещи в сумку');
+      if(!F.q[5]){
+        const miss=[];
+        if(!F.bag.docs)miss.push('документы, телефон, зарядку и кошелёк со стола');
+        if(!F.bag.water)miss.push('воду с тумбочки');
+        need.push(miss.length?('положить в сумку: '+miss.join(' и ')):'собрать вещи в сумку');
+      }
       await say(null,['* Ещё нужно: '+need.join(', ')+'.']);
       return;
     }
@@ -808,7 +813,14 @@ function blocked(x,y){const sc=SC[S.scene],b=sc.bounds;if(x-7<b[0]||x+7>b[0]+b[2
 function findTarget(){
  const sc=SC[S.scene];if(!sc.walk)return null;
  const v=DV[S.dir];const fx=S.px+v[0]*14,fy=S.py-4+v[1]*14;
- for(const o of sc.objs())if((!o.on||o.on())&&rectHit(fx,fy,o.r))return o;
+ let best=null,bestD=1e9;
+ for(const o of sc.objs()){
+  if(o.on&&!o.on())continue;
+  if(!rectHit(fx,fy,o.r))continue;
+  const cx=o.r[0]+o.r[2]/2,cy=o.r[1]+o.r[3]/2,d=Math.hypot(fx-cx,fy-cy);
+  if(d<bestD){best=o;bestD=d;}
+ }
+ if(best)return best;
  if(S.rus.vis&&S.rus.mode!=='hidden'&&sc.rusAct){
   const d1=Math.hypot(fx-S.rus.x,fy-(S.rus.y-8));
   if(d1<16)return{n:'Руслан',act:sc.rusAct};
