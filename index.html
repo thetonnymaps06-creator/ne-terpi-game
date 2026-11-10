@@ -1,0 +1,738 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#000000">
+<meta name="screen-orientation" content="landscape">
+<title>Не терпи</title>
+<style>
+html,body{margin:0;height:100%;background:#000;overflow:hidden;font-family:"Courier New",Courier,monospace;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none;overscroll-behavior:none;-webkit-text-size-adjust:100%;-webkit-touch-callout:none}
+#wrap{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);--u:16px;font-size:var(--u)}
+#c{width:100%;height:100%;display:block;image-rendering:pixelated;image-rendering:crisp-edges;background:#000}
+.hidden{display:none!important}
+#hud{position:absolute;left:1.5%;top:1.5%;font-size:.72em;font-weight:bold;background:rgba(0,0,0,.6);padding:.2em .5em;border:.12em solid #fff;max-width:60%}
+#hint{position:absolute;right:1.5%;top:1.5%;font-size:.72em;font-weight:bold;background:rgba(0,0,0,.6);padding:.2em .5em;color:#ff0}
+#toast{position:absolute;left:50%;top:12%;transform:translateX(-50%);background:#000;border:.15em solid #ff0;color:#ff0;padding:.35em .8em;font-weight:bold;font-size:.8em;opacity:0;transition:opacity .3s;white-space:nowrap}
+#toast.on{opacity:1}
+#box{position:absolute;left:3%;right:3%;bottom:3%;height:31%;background:#000;border:.28em solid #fff;padding:.6em .9em;box-sizing:border-box;font-weight:bold}
+#spk{position:absolute;top:-1.35em;left:.6em;background:#000;border:.18em solid #fff;padding:0 .5em;font-size:.8em;color:#ffd84a}
+#txt{white-space:pre-wrap;padding-left:1.1em;text-indent:-1.1em;line-height:1.35;font-size:1em}
+#ch{margin-top:.2em}
+#ch div{padding:.08em 0 .08em 1.4em;position:relative;font-size:.95em}
+#ch div.sel{color:#ff0}
+#ch div.sel:before{content:"\2764";color:#f22;position:absolute;left:.1em}
+#panel{position:absolute;left:12%;right:12%;top:9%;bottom:9%;background:#000;border:.28em solid #fff;padding:.8em 1.1em;box-sizing:border-box;font-weight:bold;overflow:auto}
+#panel h2{margin:0 0 .4em;font-size:1.05em;color:#ffd84a}
+#panel .q{font-size:.85em;padding:.1em 0}
+#panel .q.done{color:#7c7}
+#panel .q.cur{color:#ff0}
+#panel .foot{margin-top:.6em;font-size:.7em;color:#aaa}
+#fade{position:absolute;inset:0;background:#000;opacity:1;pointer-events:none;transition:opacity .35s}
+#title{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-weight:bold;z-index:5;cursor:pointer}
+#title h1{font-size:3.2em;margin:0 0 .2em;letter-spacing:.15em}
+#title .sub{font-size:.8em;color:#bbb;margin-bottom:1.6em}
+#title .ctl{font-size:.72em;color:#ccc;line-height:1.6}
+#title .go{margin-top:1.6em;color:#ff0;animation:bl 1.2s infinite}
+#title .heart{color:#f22;font-size:1.4em}
+@keyframes bl{50%{opacity:.25}}
+#touch{position:fixed;inset:0;pointer-events:none;z-index:40}
+#pad{position:absolute;left:calc(10px + env(safe-area-inset-left));top:50%;transform:translateY(-50%);width:168px;height:168px;display:grid;grid-template-areas:". up ." "left mid right" ". down .";grid-template-columns:56px 56px 56px;grid-template-rows:56px 56px 56px;gap:4px}
+#acts{position:absolute;right:calc(10px + env(safe-area-inset-right));top:50%;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:10px}
+#touch .b{width:56px;height:56px;border:2px solid rgba(255,255,255,.55);border-radius:12px;background:rgba(255,255,255,.12);color:#fff;font:bold 18px monospace;display:flex;align-items:center;justify-content:center;pointer-events:auto;touch-action:none;user-select:none}
+#acts .b[data-k="ok"]{width:68px;height:68px;border-color:#ffe08a;color:#ffe08a}
+#pad .b[data-k="up"]{grid-area:up}
+#pad .b[data-k="left"]{grid-area:left}
+#pad .b[data-k="right"]{grid-area:right}
+#pad .b[data-k="down"]{grid-area:down}
+#rotate{display:none;position:fixed;inset:0;background:#000;z-index:80;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:2em;font-weight:bold}
+#rotate.show{display:flex}
+#rotate .phone{font-size:3.2em;margin-bottom:.35em}
+#rotate p{margin:.2em 0 0;font-size:1.15em;line-height:1.45}
+body.portrait #rotate{display:flex}
+body.portrait #touch{display:none!important}
+body.portrait #wrap{visibility:hidden}
+body:not(.touch) #touch{display:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c" width="640" height="480"></canvas>
+  <div id="hud" class="hidden"></div>
+  <div id="hint" class="hidden"></div>
+  <div id="toast"></div>
+  <div id="box" class="hidden"><div id="spk"></div><div id="txt"></div><div id="ch"></div></div>
+  <div id="panel" class="hidden"></div>
+  <div id="fade"></div>
+  <div id="title">
+    <div class="heart">&#10084;</div>
+    <h1>НЕ ТЕРПИ</h1>
+    <div class="sub">маленькая игра про одну длинную ночь</div>
+    <div class="ctl">Поверни телефон горизонтально<br>Джойстик — идти<br>Z — действие, дальше<br>X — быстрее текст<br>C — меню: задачи, осмотреть себя</div>
+    <div class="go" id="startBtn">[ Нажми здесь / Z — начать ]</div>
+  </div>
+</div>
+<div id="rotate">
+  <div class="phone">&#8635;</div>
+  <p>Поверни телефон горизонтально</p>
+</div>
+<div id="touch">
+  <div id="pad">
+    <div class="b" data-k="up">&#9650;</div>
+    <div class="b" data-k="left">&#9664;</div>
+    <div class="b" data-k="right">&#9654;</div>
+    <div class="b" data-k="down">&#9660;</div>
+  </div>
+  <div id="acts">
+    <div class="b" data-k="back">X</div>
+    <div class="b" data-k="ok">Z</div>
+    <div class="b" data-k="menu">C</div>
+  </div>
+</div>
+<script>
+"use strict";
+/* ================= ТЕКСТЫ (сюжет: plot.md, дословно) ================= */
+const L={
+start:["* Я открываю глаза.","* У меня внизу живота знакомое жжение. Поясницу тянет тупой болью.","* Снова хочется в туалет. Хотя я только недавно вставала.","* На краю кровати сидит Руслан. Каштановые волосы растрёпаны, на щеках лёгкая щетина. Кажется, он не спал.","* Его карие глаза сразу находят мои.","* Светлая прядь лезет на очки. Я заправляю её за ухо — тонкая оправа чуть сползает."],
+rusIdle:["* ...зайка моя.","* Как ты?","* Не надо так лежать и ждать, что само рассосётся."],
+rusTalk:["* Солнышко. Я вижу.","* Кровь, поясница, эти постоянные позывы... это уже не «немного потерпеть».","* Давай по-умному: вода, полочка, туалет если надо. Потом соберём вещи и поедем во Фрибур, в HFR.","* Я с тобой. На всех остановках."],
+hideN:["* Руслан мягко, но очень твёрдо оказывается между мной и подушкой."],
+hideR:["* Нет, милая. Кровать нас не вылечит.","* Давай. Вставай. Я помогу."],
+self:["* Чёрный топ, поверх белая рубашка. Ворот слегка смялся за ночь.","* На шее тонкая цепочка. Круглый кулон холодит кожу, когда я наклоняюсь.","* Тёмная помада, наверное, уже смазалась. Сейчас это вообще неважно.","* Длинные тёмные волосы путаются на плече. Спереди светлые, почти блонд пряди.","* Прозрачные очки с тонкой оправой чуть сползают. Я поправляю их пальцем."],
+exRus:["* Растрёпанные каштаново-коричневые волосы. Лёгкая щетина. Карие глаза чуть красные — он точно почти не спал.","* Коричневая толстовка смята, будто он сидел в ней всю ночь на краю моей кровати.","* Он выглядит как человек, который всё это время выбирал между «не давить» и «не дать мне себя забросить»."],
+exRus2:["* Растрёпанные каштановые волосы. Щетина. Карие глаза.","* Сегодня он выбрал сразу оба варианта — не давить и не бросить — и у него почти получилось."],
+bed:["* Простыни сбиты в жгут.","* Лежать уже не помогает. Только откладывает то, что мне всё равно придётся сделать."],
+shelf:["* На полочке два блистера: ибупрофен и фурагин.","* Ибупрофена ещё хватает. Фурагин почти на исходе.","* Это уже не курс. Это остатки моей надежды, что «ещё чуть-чуть, и пройдёт»."],
+meds:["* Ибупрофен снимет край, солнышко. Но не причину.","* А фурагина тут на пару раз, не больше.","* Нам нужны нормальные антибиотики. Настоящий приём. HFR.","* Но воду ты сейчас всё равно выпей. И если совсем невмоготу — ибупрофен можно."],
+drinkN:["* Бутылка тёплая от комнаты, но вода есть.","* Я пью. Пить одновременно хочется и страшно: чем больше воды, тем быстрее мне снова в туалет.","* Руслан кивает, как будто это маленькая победа."],
+drinkR:["* Так. Хорошая девочка.","* Знаю, что потом снова придётся бежать. Это нормально. Не копи в себе."],
+window:["* За стеклом темно и тихо.","* Фрибур ещё далеко. Но уже не «когда-нибудь»."],
+bagEmpty:["* Сумка пустая и смотрит на меня укоризненно.","* Документы, вода, телефон, зарядка, кошелёк. Можно ещё что-то тёплое."],
+doorEarly:["* Обычная дверь. За ней коридор, улица, такси, больница.","* Пока рано. Сначала мне нужно собраться."],
+doorRus:["* Солнышко, подожди.","* Вода, документы, телефон. Давай не будем геройствовать на пустые карманы.","* Я никуда без тебя не уйду. Просто давай сделаем это правильно."],
+toilet:["* Я закрываю дверь.","* В зеркале на миг вижу себя: длинные тёмные волосы, спереди светлые пряди, прозрачные очки с тонкой оправой, чуть смазанная тёмная помада, тонкая цепочка с круглым кулоном. Чёрный топ, поверх белая рубашка.","* Выгляжу не героически. Выгляжу как человек, которому пора ехать.","* Облегчение приходит вместе с резкой болью.","* В воде розовый след.","* Поясница отвечает тупой вспышкой, будто напоминает: это уже не только «здесь внизу»."],
+toiletRus:["* Зайка... там опять кровь?","* Всё. Больше не терпим.","* Это не стыдно. Это сигнал. Мы едем."],
+toiletAgain:["* Снова.","* Тело не спрашивает, удобно ли мне сейчас.","* За дверью тихонько: «Я тут, милая. Не торопись, как получится»."],
+mirror:["* В зеркале я: длинные тёмные волосы, спереди светлые, почти блонд пряди.","* Прозрачные очки с тонкой оправой. Тёмная помада. Тонкая цепочка, круглый кулон.","* Чёрный топ, белая рубашка поверх.","* Это моё лицо. Сегодня ему нужно не спрятаться в кровать, а доехать до HFR."],
+packed:["* Вот так, зайка моя.","* Видишь? Уже не «я полежу ещё час», а «мы выходим».","* Давай. Я закрою окно и пойду с тобой."],
+corr:["* Коридор пахнет чужой едой и чужим спокойствием.","* Мне снова хочется вернуться. Ноги знают дорогу до кровати наизусть."],
+corrRus:["* Давай, милая. Не смотри на двери. Смотри на выход.","* Если нужно остановиться — остановимся. Если нужно в туалет по пути — найдём.","* Только не назад. Назад нас снова уговорит подушка."],
+street1:["* Холод сразу бьёт мне в поясницу.","* Воздух резкий, честный. В комнате было проще притворяться, что ничего страшного."],
+street2:["* Руслан поправляет мне ворот белой рубашки и накидывает свою коричневую толстовку.","* От неё пахнет им. На плечах становится теплее — и как-то спокойнее в груди."],
+streetR:["* Солнышко, тебе холодно?","* Держись за меня, если качнёт.","* Сейчас поймаем такси. До Фрибура, до HFR. Без приключений."],
+board:["* Зайка моя, давай. Это уже не страх. Это дорога.","* Я сяду рядом. Воду держи под рукой."],
+taxiBg:["* Город общаги остаётся у меня за спиной.","* Фары лижут разметку.","* Поясница ноет в такт лежачему полицейскому.","* В какой-то момент мне снова хочется просить остановку. Я ловлю себя на том, что терплю.","* Руслан замечает это раньше, чем я успеваю спрятать."],
+taxiTalk:[["* Ты очень храбрая, зайка. Даже когда тебе кажется, что ты просто «нытик».","* Нытики не собирают сумку в такой час и не едут через полкантона, чтобы их осмотрели."],["* Пей воду. Знаю, что страшно. Но сушить себя сейчас — плохая идея.","* Если жжёт — скажи. Если нужно остановиться — скажи. Я не смущусь и водителя попрошу."],["* Давай, милая. Ещё немного. Потом регистратура, анализ, лекарство. Потом домой.","* Я рядом. Не в телефоне, не «напиши, как доехала». Вот тут."]],
+taxiSilent:["* ...солнышко.","* Можно ничего не говорить. Я всё равно тут.","* Просто не выключайся от меня совсем, ладно?"],
+taxiWin:["* За стеклом тёмные поля и редкие дома.","* Кажется, что больница — выдумка, а настоящая жизнь — только эта спинка сиденья и его плечо рядом."],
+taxiWinR:["* Доедем. HFR никуда не денется. И ты тоже."],
+taxiWater:["* Глоток. Ещё один.","* Тело благодарно и сразу предупреждает: скоро мне снова понадобится туалет."],
+taxiWaterR:["* Хорошо. Так и надо. Я попрошу остановиться, если что."],
+driverOk:["* Всё хорошо. Просто нам очень нужно доехать. Спасибо, что везёте."],
+arrive:["* Табличка. Корпус. Холодный свет над входом.","* HFR. Уже не идея, а здание.","* Кулон стукает мне в ключицу, когда я наклоняюсь к сумке."],
+arriveR:["* Приехали, зайка моя. Давай, я помогу выйти."],
+hall:["* Больница не театральная. Она обычная.","* Люди здесь не герои. Просто те, кому тоже стало нельзя терпеть.","* Я поправляю очки. Светлая прядь снова лезет на лицо."],
+hallR:["* Вот и мы, солнышко.","* Сейчас регистратура. Ты говоришь, как есть: частые позывы, кровь, боль в пояснице.","* Это не «я мешаю». Это причина, по которой это место существует.","* Я могу говорить за тебя, если горло сожмёт. Но если сможешь — скажи сама. Тебя услышат лучше."],
+recHelp:["* У неё цистит, и сегодня хуже: кровь, боль в пояснице, очень частые позывы.","* Нам нужен осмотр и анализ. Пожалуйста."],
+recOk:["* Хорошо. Присядьте. Вас вызовут.","* Если станет совсем плохо — скажите сразу."],
+recAfter:["* Видишь? Никто не засмеялся и не прогнал.","* Давай сядем. Воду я налью. Ты дышишь, я слежу за табло."],
+wait:["* Время в больнице тянется как резинка.","* Каждая минута спрашивает меня: «А вдруг зря приехала?»","* Нет. Не зря.","* Я кручу кулон пальцами, чтобы не сжимать руку в кулак."],
+waitR:["* Зайка моя, положи голову мне на плечо, если хочешь.","* Ты уже сделала самую страшную часть — встала и доехала.","* Дальше будут люди, которые этим занимаются каждый день.","* Я никуда не отойду. Даже если скажут «подождите за дверью», буду сразу за ней."],
+hospToilet:["* Опять розовое.","* Страшно, но теперь это происходит не в одинокой комнате общаги. За стеной — кабинет, где этим займутся."],
+called:["* Вас вызвали."],
+calledR:["* Давай, милая. Я с тобой, пока пустят."],
+nurse:["* Здравствуйте. Нужен анализ мочи.","* Туалет напротив. Контейнер вот. Подпишите.","* Ничего страшного. Как получится."],
+rusDoor:["* Я тут, солнышко.","* Как выйдешь — сразу скажи, как ты.","* Ты справляешься. Правда."],
+analysis:["* Я делаю то, чего всю дорогу боялась делать «при людях».","* Это не унижение. Это данные.","* Контейнер тёплый от моей руки. На этикетке моё имя выглядит вдруг очень официально."],
+doc:["* Жалобы: резь, частые позывы, кровь, боль в пояснице.","* Правильно, что приехали, а не стали ещё три дня «понаблюдать».","* Сейчас по анализу и осмотру. Скорее всего, понадобится курс антибиотиков. Поясницу тоже учитываем.","* Пейте воду, не терпите, допейте курс до конца. Если температура, рвота, резкое усиление боли в спине — сразу обратно или в неотложку."],
+docRus:["* Спасибо, что смотрите.","* Зайка, слышишь? Ты всё сделала вовремя."],
+phBox:["* Коробочка лёгкая. Слишком лёгкая для всей этой ночи.","* Но внутри как раз то, за чем я ехала."],
+phStaff:["* Вот ваш препарат. Курс как указано. Не бросать на середине, даже если станет легче.","* Воды побольше. Отдых."],
+phRus:["* Держи, зайка моя.","* Видишь? Мы доехали. Мы попросились. Нам дали то, что нужно.","* Теперь домой. И первую таблетку — как только окажемся в комнате. Можно раньше, если скажешь, что не терпится."],
+phFreeze:["* Солнышко. Это не слабость.","* Это ты себя не бросила.","* Давай, милая. Я вызову такси."],
+back:["* Дорога та же, только я уже не еду в неизвестность.","* Я еду домой с коробкой, ради которой стоило встать.","* В окне всё светлее. На коленях лежит его толстовка, если я верну её не сразу."],
+backTalk:[["* Можешь закрыть глаза. Я не дам нам проехать общагу.","* Гордись собой, зайка. Серьёзно."],["* Многие бы ещё сутки уговаривали себя, что «утро вечера мудренее».","* А ты поехала."],["* Я очень рад, что ты меня послушала. И ещё больше — что ты себя послушала."]],
+thanks:["* Конечно, солнышко.","* Куда я денусь.","* Ты бы для меня то же сделала. Я знаю."],
+backWin:["* Огни редеют.","* Скоро знакомый фонарь у общаги."],
+home:["* Вот и наша дверь."],
+homeR:["* Давай, я понесу сумку. Ты неси себя."],
+table:["* Вот вода. Вот первая.","* Давай, милая. Медленно.","* Потом ляжешь. Я задвину штору и посижу рядом.","* В туалет — как нужно, без геройства. Будить меня не надо, я и так не усну далеко."],
+pill:["* Я глотаю. Никакой магии сразу не случается.","* Но внутри появляется странное новое чувство: теперь это не просто боль, а боль, с которой я начала бороться."],
+bed2:["* Простыни всё те же.","* Но ложиться в них после HFR — совсем не то, что прятаться в них от HFR."],
+end1:["* Боль ещё здесь. Жжение не исчезло от одной таблетки и одной поездки.","* Но в сумке больше не пустота, а курс. На полочке — не остатки фурагина, а нормальное лечение.","* Руслан садится на край кровати, как в начале. Каштановые волосы всё так же растрёпаны. Только теперь он выдыхает."],
+end2:["* Спи, зайка моя.","* Я рядом.","* Завтра тоже буду рядом. И послезавтра. Пока не станет легче.","* Ты очень хорошо сегодня поработала. Правда."],
+end3:["* Он поправляет край одеяла. Цепочка тихо звенит, когда я поворачиваюсь.","* Где-то за стеной чужая жизнь общаги идёт своим ходом.","* У меня теперь другой сюжет: не «потерпеть», а «долечить»."],
+warmR:["* Солнышко.","* Спасибо, что не выставила меня «занудой с водой».","* Я очень тебя люблю. И очень хочу, чтобы тебе не было больно.","* Давай в следующий раз бояться вместе и всё равно ехать. Хорошо?"],
+warmN:["* Я чувствую, как его плечо под щекой тёплое и настоящее.","* Можно спать."],
+fin:["* НЕ ТЕРПИ","* Конец."],
+pause:["* Зайка моя, я здесь.","* Солнышко, давай не будем это терпеть.","* Воду. Хотя бы несколько глотков.","* Давай, милая. Следующий маленький шаг, не вся жизнь сразу.","* Это не стыдно.","* Хорошая девочка. Мы уже ближе, чем минуту назад.","* Я никуда не уйду."]
+};
+const QN=["","Поговорить с Русланом","Сходить в туалет","Найти лекарства на полочке","Выпить воды","Собрать вещи","Выйти из комнаты","Поймать такси до Фрибура","Записаться на приём","Сдать анализ","Получить антибиотики","Вернуться домой","Принять первую таблетку и лечь"];
+
+/* ================= БАЗА ================= */
+const $=id=>document.getElementById(id);
+const cv=$('c'),ctx=cv.getContext('2d');
+const wrap=$('wrap');
+function viewport(){const vv=window.visualViewport;return{w:vv?vv.width:innerWidth,h:vv?vv.height:innerHeight};}
+function hasTouch(){return (navigator.maxTouchPoints||0)>0||'ontouchstart' in window;}
+function isPortrait(){const {w,h}=viewport();return h>w+24;}
+function tryLandscape(){try{const o=screen.orientation;if(o&&o.lock)o.lock('landscape').catch(()=>{});}catch(e){}}
+function fit(){
+ const {w,h}=viewport();
+ const portrait=isPortrait();
+ const touch=hasTouch();
+ document.body.classList.toggle('portrait',portrait);
+ document.body.classList.toggle('touch',touch);
+ const rot=$('rotate');if(rot)rot.classList.toggle('show',portrait);
+ const side=(!portrait&&touch)?Math.min(156,Math.max(118,w*0.17)):0;
+ const availW=Math.max(160,w-side*2);
+ let W2=Math.min(availW,h*4/3),H2=W2*3/4;
+ wrap.style.width=W2+'px';wrap.style.height=H2+'px';wrap.style.setProperty('--u',(W2/36)+'px');
+}
+addEventListener('resize',fit);
+addEventListener('orientationchange',()=>setTimeout(fit,200));
+if(window.visualViewport)visualViewport.addEventListener('resize',fit);
+fit();
+function R(x,y,w,h,c){ctx.fillStyle=c;ctx.fillRect(x,y,w,h);}
+function T(s,x,y,c,sz,al){ctx.fillStyle=c;ctx.font='bold '+(sz||6)+'px monospace';ctx.textAlign=al||'left';ctx.fillText(s,x,y);}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ---------- звук ---------- */
+let AC=null;
+function initAudio(){if(!AC){try{AC=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}}
+const VOICE={'Руслан':150,'Ника':330,'Водитель':120,'Регистратор':260,'Медсестра':300,'Врач':180,'Сотрудник аптеки':280};
+function blip(sp,f){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain();o.type='square';o.frequency.value=f||(VOICE[sp]||230)*(0.95+Math.random()*0.1);g.gain.value=0.025;o.connect(g);g.connect(AC.destination);const t=AC.currentTime;g.gain.setValueAtTime(0.025,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);o.start(t);o.stop(t+0.06);}
+function jingle(){if(!AC)return;[523,659,784].forEach((f,i)=>setTimeout(()=>blip(null,f),i*90));}
+
+/* ---------- ввод ---------- */
+const keys={};
+function mapKey(k,code){
+ if(['ArrowUp','w','W','ц','Ц'].includes(k)||code==='ArrowUp'||code==='KeyW')return'up';
+ if(['ArrowDown','s','S','ы','Ы'].includes(k)||code==='ArrowDown'||code==='KeyS')return'down';
+ if(['ArrowLeft','a','A','ф','Ф'].includes(k)||code==='ArrowLeft'||code==='KeyA')return'left';
+ if(['ArrowRight','d','D','в','В'].includes(k)||code==='ArrowRight'||code==='KeyD')return'right';
+ if(['z','Z','y','Y','я','Я','Enter',' '].includes(k)||code==='KeyZ'||code==='KeyY'||code==='Enter'||code==='Space')return'ok';
+ if(['x','X','ч','Ч','Shift','Backspace'].includes(k)||code==='KeyX'||code==='ShiftLeft'||code==='ShiftRight'||code==='Backspace')return'back';
+ if(['c','C','с','С','i','I','ш','Ш','Tab'].includes(k)||code==='KeyC'||code==='KeyI'||code==='Tab')return'menu';
+ return null;}
+addEventListener('keydown',e=>{const k=mapKey(e.key,e.code);if(!k)return;e.preventDefault();const first=!keys[k];keys[k]=true;if(first&&!e.repeat)press(k);});
+addEventListener('keyup',e=>{const k=mapKey(e.key,e.code);if(k)keys[k]=false;});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;});
+document.querySelectorAll('#touch .b').forEach(b=>{const k=b.dataset.k;
+ b.addEventListener('pointerdown',e=>{e.preventDefault();keys[k]=true;press(k);});
+ ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>{keys[k]=false;}));});
+let panelRes=null;
+function press(k){
+ initAudio();tryLandscape();
+ if(!$('title').classList.contains('hidden')){ if(k==='ok'&&!G.started){G.started=true;$('title').classList.add('hidden');startGame();} return;}
+ if(panelRes){if(k==='ok'||k==='back'||k==='menu'){const r=panelRes;panelRes=null;$('panel').classList.add('hidden');r();}return;}
+ if(D){dlgKey(k);return;}
+ if(busy||!S.control)return;
+ if(k==='ok')interact();
+ else if(k==='menu')run(openMenu);
+}
+
+/* ---------- диалоги ---------- */
+const box=$('box'),spk=$('spk'),txt=$('txt'),chEl=$('ch');
+let D=null;
+function say(speaker,lines){return new Promise(res=>{D={mode:'say',speaker,lines:lines.slice(),i:0,res};box.classList.remove('hidden');showLine();});}
+function showLine(){
+ const line=D.lines[D.i];spk.textContent=D.speaker||'';spk.style.display=D.speaker?'block':'none';chEl.innerHTML='';txt.textContent='';
+ D.full=line;D.n=0;D.typing=true;clearInterval(D.t);
+ const d=D;d.t=setInterval(()=>{d.n++;txt.textContent=d.full.slice(0,d.n);const c=d.full[d.n-1];if(d.n%2===0&&c!==' '&&c!=='*')blip(d.speaker);if(d.n>=d.full.length){clearInterval(d.t);d.typing=false;}},24);
+}
+function closeDlg(){const r=D.res;clearInterval(D.t);D=null;setTimeout(()=>{if(!D)box.classList.add('hidden');},30);r();}
+function choose(opts,prompt){return new Promise(res=>{D={mode:'choose',opts,sel:0,res};box.classList.remove('hidden');spk.style.display='none';txt.textContent=prompt||'';renderCh();});}
+function renderCh(){chEl.innerHTML='';D.opts.forEach((o,i)=>{const d=document.createElement('div');d.textContent=o;if(i===D.sel)d.className='sel';chEl.appendChild(d);});}
+function dlgKey(k){
+ if(D.mode==='say'){
+  if(D.typing){if(k==='ok'||k==='back'){clearInterval(D.t);D.typing=false;txt.textContent=D.full;}return;}
+  if(k==='ok'){D.i++;if(D.i>=D.lines.length)closeDlg();else showLine();}
+ }else{
+  if(k==='up'){D.sel=(D.sel+D.opts.length-1)%D.opts.length;renderCh();blip(null,600);}
+  else if(k==='down'){D.sel=(D.sel+1)%D.opts.length;renderCh();blip(null,600);}
+  else if(k==='ok'){const r=D.res,s=D.sel;D=null;setTimeout(()=>{if(!D)box.classList.add('hidden');},30);blip(null,800);r(s);}
+ }
+}
+function showPanel(html){return new Promise(r=>{const p=$('panel');p.innerHTML=html;p.classList.remove('hidden');panelRes=r;});}
+
+/* ---------- переходы ---------- */
+const fadeEl=$('fade');
+async function fadeOut(){fadeEl.style.opacity=1;await sleep(380);}
+async function fadeIn(){fadeEl.style.opacity=0;await sleep(380);}
+let toastT=null;
+function toast(s){const t=$('toast');t.textContent=s;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2400);}
+
+/* ================= СПРАЙТЫ ================= */
+const P12=r=>r.map(x=>(x+'............').slice(0,12));
+const NS={
+front:P12(["...HHHHHH...","..HHHHHHHH..",".HHBBHHHHHH.",".HBBSSSSSSH.",".HBGGGSGGGH.",".HBGEGSGEGH.",".HBSSSSSSSH.",".HHSSLLSSHH.",".HH.SSSS.HH.",".HWWPKKPWWH.",".WWWKPPKWWW.",".WWWKKKKWWW.",".SWWKKKKWWS.","..WWKKKKWW.."]),
+back:P12(["...HHHHHH...","..HHHHHHHH..",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".WHHHHHHHHW.",".WWHHHHHHWW.",".WWWHHHHWWW.",".SWWWHHWWWS.","..WWWWWWWW.."]),
+side:P12(["....HHHHH...","...HHHHHHH..","..BBHHHHHHH.","..BSSSHHHHH.",".GGGSSHHHHH.",".GEGSSHHHHH.","..SSSSHHHHH.","..LSSSHHHHH.","...SSHHHHHH.","...WKKWHHHH.","...WPKWWHHH.","...WKKWWHH..","...SKKWWW...","...WKKWW...."])};
+const RS={
+front:P12(["..R.RRR.R...",".RRRRRRRRR..",".RRRRRRRRRR.",".RRSSSSSSRR.",".RSSESSESSR.","..SSSSSSSS..","..DSSSSSSD..","..DDSDDSDD..","...DDDDDD...",".OOOOOOOOOO.","OOOOOooOOOOO","OOOOOooOOOOO","OOOOOOOOOOOO","SOOOOOOOOOOS",".OOOOOOOOOO."]),
+back:P12(["..R.RRR.R...",".RRRRRRRRR..",".RRRRRRRRRR.",".RRRRRRRRRR.",".RRRRRRRRRR.","..RRRRRRRR..","..SSSSSSSS..","..SSSSSSSS..","...SSSSSS...",".OOOOOOOOOO.","OOOOOOOOOOOO","OOOOOOOOOOOO","OOOOOOOOOOOO","SOOOOOOOOOOS",".OOOOOOOOOO."]),
+side:P12(["...RRRR.R...","..RRRRRRRR..",".RRRRRRRRRR.",".SSSRRRRRRR.",".SESSSRRRR..",".SSSSSRRRR..",".DSSSSSRR...",".DDDDSSS....","..DDDSSS....","..OOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".SOOOOOOOO..","..OOOOOOOO.."])};
+const LEGA=P12(["..JJJJJJJJ..","..JJJ..JJJ..","..JJJ..JJJ..","..JJ....JJ..","..FF....FF.."]);
+const LEGB=P12(["..JJJJJJJJ..","..JJJ..JJJ..","..JJ....JJ..",".JJ......JJ.",".FF......FF."]);
+const LEGS=P12(["..JJJJJJJJ..","..JJJJJJJJ..","..FF....FF.."]);
+const PAL_N={H:'#2b1d18',B:'#e6cf86',S:'#f2c9a8',G:'#c8d4de',E:'#3a2a22',L:'#5b1a2e',W:'#f4f4f0',K:'#141414',P:'#e8c84a',J:'#2f3550',F:'#151515'};
+const PAL_NH=Object.assign({},PAL_N,{W:'#9b6a42'});
+const PAL_R={R:'#7b4a28',S:'#e8b994',E:'#4a2a12',D:'#5e3b22',O:'#a8794e',o:'#8a5f3a',J:'#3a3a42',F:'#1a1a1a'};
+const PAL_R2=Object.assign({},PAL_R,{O:'#d2b78e',o:'#b89a72'});
+const PAL_DRV={R:'#2a2a2a',S:'#d9a77f',E:'#222',D:'#d9a77f',O:'#2d3b55',o:'#24304a',J:'#222',F:'#111'};
+const PAL_REG={R:'#1e1e24',S:'#e3b896',E:'#222',D:'#e3b896',O:'#5a7fa0',o:'#4b6c8a',J:'#334',F:'#111'};
+const PAL_NUR={R:'#c9a04a',S:'#f0c8a8',E:'#335',D:'#f0c8a8',O:'#eef4f8',o:'#bcd6e4',J:'#7fb0c8',F:'#eee'};
+const PAL_DOC={R:'#6a6a6a',S:'#e0b090',E:'#223',D:'#9a9a9a',O:'#f4f6f8',o:'#c8d0d8',J:'#555',F:'#222'};
+const PAL_PH={R:'#8a3a2a',S:'#f0c6a0',E:'#222',D:'#f0c6a0',O:'#e8f0e8',o:'#c0d8c0',J:'#555',F:'#222'};
+const PAL_P1={R:'#444',S:'#cfa07c',E:'#222',D:'#cfa07c',O:'#5c5c66',o:'#4a4a52',J:'#333',F:'#111'};
+const PAL_P2={R:'#b08a5a',S:'#f0cdb0',E:'#222',D:'#f0cdb0',O:'#7a4a6a',o:'#653c58',J:'#333',F:'#111'};
+function drawPat(rows,pal,x0,y0,s,flip){for(let i=0;i<rows.length;i++){const r=rows[i];for(let j=0;j<12;j++){const ch=r[j];if(ch==='.')continue;const c=pal[ch];if(!c)continue;R(x0+(flip?11-j:j)*s,y0+i*s,s,s,c);}}}
+function drawChar(who,x,y,dir,frame,pose,s,pal){
+ s=s||2;const set=who==='n'?NS:RS;
+ const top=dir==='up'?set.back:(dir==='down'?set.front:set.side);
+ const flip=dir==='right';
+ const legs=pose==='sit'?LEGS:(frame?LEGB:LEGA);
+ const rows=top.concat(legs);const h=rows.length*s;
+ ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x-5*s,y-s,10*s,2*s);
+ drawPat(rows,pal||(who==='n'?PAL_N:PAL_R),x-6*s,y-h,s,flip);
+}
+function nPal(){return S.hoodie?PAL_NH:PAL_N;}
+function rPal(){return S.hoodie?PAL_R2:PAL_R;}
+
+/* ================= СОСТОЯНИЕ ================= */
+const G={started:false};
+function tryStart(){if(!$('title').classList.contains('hidden'))press('ok');}
+$('title').addEventListener('pointerdown',e=>{e.preventDefault();tryStart();});
+window.addEventListener('load',()=>{document.body.tabIndex=0;document.body.focus();});
+addEventListener('pointerdown',()=>{try{document.body.focus();}catch(e){}});
+let S,F,busy=false;
+function resetState(){
+ S={scene:'room',px:124,py:150,dir:'left',frame:0,ft:0,moving:false,pose:'lie',control:false,
+    rus:{x:98,y:140,dir:'down',pose:'sit',mode:'static',frame:0,ft:0,vis:true},trail:[],dim:0,hoodie:false,t:0,idle:0};
+ F={q:Array(13).fill(false),bag:{},talkT:0,backT:0,acts:0};
+}
+resetState();
+function quest(n){if(F.q[n])return;F.q[n]=true;jingle();toast('★ '+QN[n]);}
+function curQuest(){for(let i=1;i<=12;i++)if(!F.q[i])return i;return 0;}
+async function run(fn){if(busy)return;busy=true;try{await fn();}catch(e){console.error(e);}finally{busy=false;}}
+const pick=a=>a[Math.floor(Math.random()*a.length)];
+const rusPause=()=>say('Руслан',[pick(L.pause)]);
+
+async function go(scene,x,y,dir,noEnter){
+ await fadeOut();
+ S.scene=scene;S.px=x;S.py=y;S.dir=dir||'down';S.pose='stand';
+ const sc=SC[scene];
+ if(S.rus.mode==='follow'){const v=DV[S.dir];if(v[0]){S.rus.x=x-v[0]*20;S.rus.y=y;}else{S.rus.x=x+(x>250?-22:22);S.rus.y=y;}S.rus.dir=S.dir;S.trail=[];for(let i=0;i<20;i++)S.trail.push({x:S.rus.x,y:S.rus.y});}
+ if(sc.setup)sc.setup();
+ await fadeIn();
+ if(sc.enter&&!noEnter)await sc.enter();
+}
+const DV={up:[0,-1],down:[0,1],left:[-1,0],right:[1,0]};
+
+/* ================= СЦЕНЫ: РИСОВАНИЕ ================= */
+function drawRoom(){
+ const r2=F.r2,t=S.t;
+ R(0,0,320,240,'#000');
+ R(8,8,304,50,'#3c3452');for(let x=12;x<312;x+=16)R(x,8,2,50,'#433a5c');R(8,56,304,8,'#2a2440');
+ R(8,64,304,168,'#5b4632');for(let y=76;y<232;y+=12){R(8,y,304,1,'#4c3a29');for(let x=((y/12)%2)*30+8;x<312;x+=60)R(x,y-11,1,11,'#4c3a29');}
+ // окно
+ R(184,12,62,46,'#251f33');R(188,16,54,38,r2?'#8090c4':'#0b1230');
+ if(r2){R(188,40,54,14,'#e3a99a');R(188,48,54,6,'#f0c890');}
+ else{for(const [sx,sy] of [[194,22],[210,30],[232,20],[222,44],[200,40]])R(sx,sy,1,1,(t>>4)%7===sx%7?'#556':'#ccd');}
+ R(213,16,3,38,'#251f33');R(188,33,54,3,'#251f33');
+ if(r2&&F.curtain){R(186,12,58,46,'#6a3b4a');for(let x=190;x<244;x+=8)R(x,12,2,46,'#5a3040');}
+ // полочка
+ R(124,38,54,4,'#8a6a48');R(126,42,4,6,'#6a4e34');R(172,42,4,6,'#6a4e34');
+ if(!F.bag.meds){R(132,31,13,7,'#c8ccd8');for(let i=0;i<4;i++)R(134+i*3,33,2,2,'#f4f4f4');R(152,32,11,6,'#d8c8a0');R(154,34,2,2,'#e8b04a');}
+ if(r2){R(150,30,14,8,'#f4f4f4');R(150,33,14,2,'#3a7ac0');}
+ // дверь в туалет
+ R(272,12,36,52,'#5a4a3a');R(275,15,30,49,'#8e7a63');R(299,38,3,3,'#e0c070');R(284,22,12,8,'#dfe8f0');T('WC',290,29,'#335',6,'center');
+ // нижняя стена и входная дверь
+ R(8,232,304,8,'#2a2440');R(138,228,44,12,'#5a4a3a');R(141,230,38,10,'#8e7a63');R(174,233,3,3,'#e0c070');
+ // кровать
+ R(16,60,94,74,'#4a3226');R(18,62,90,68,'#d9d5e6');R(22,64,36,16,'#f6f6f6');
+ if(r2&&S.pose!=='lie'){R(20,82,86,46,'#7b68a6');R(20,82,86,4,'#9584c0');}
+ else if(!r2){R(20,84,86,44,'#7b68a6');R(28,90,60,4,'#62528a');R(36,102,56,5,'#62528a');R(24,116,70,3,'#62528a');R(60,84,30,8,'#8d7ab8');}
+ if(S.pose==='lie'&&S.scene==='room'){drawPat(NS.front.slice(0,9),nPal(),28,62,2,false);R(20,80,86,48,'#7b68a6');R(20,80,86,4,'#9584c0');if(!r2){R(30,96,60,4,'#62528a');R(40,110,50,4,'#62528a');}}
+ // тумбочка
+ R(112,62,20,30,'#6a4e34');R(112,62,20,4,'#7d5e40');R(115,72,14,2,'#4a3424');
+ if(!F.bag.water){R(118,48,8,16,'#7fb6e0');R(118,52,8,3,'#aad4f0');R(119,45,6,4,'#3a6ea8');}
+ // стол
+ R(228,96,74,8,'#8a6a48');R(228,104,74,22,'#6a4e34');R(230,104,4,22,'#523c28');R(296,104,4,22,'#523c28');
+ if(!F.bag.docs){R(234,90,16,8,'#efefe6');R(236,92,12,1,'#999');R(236,94,10,1,'#999');R(254,92,8,5,'#1e1e1e');R(255,93,6,3,'#3a5a8a');R(266,91,11,6,'#5a3a2a');R(280,95,14,2,'#ddd');R(292,93,3,4,'#eee');}
+ if(r2){R(244,84,16,12,'#f4f4f4');R(244,88,16,3,'#c03a3a');T('Rx',252,95,'#335',5,'center');if(!F.glass){R(270,84,8,12,'#a9d6f0');R(270,84,8,3,'#d8f0ff');}if(!F.pill){} }
+ // стул
+ R(254,110,20,18,'#7d5e40');R(254,128,20,6,'#6a4e34');R(256,134,3,6,'#523c28');R(269,134,3,6,'#523c28');
+ if(!F.bag.sweater){R(255,113,18,12,'#6f86a8');R(257,123,6,4,'#5f7698');}
+ if(F.hoodieOnChair){R(255,113,18,12,'#9b6a42');R(265,123,6,4,'#8a5a36');}
+ // сумка
+ const full=F.q[5]||r2;
+ R(56,(full?128:134),26,full?20:14,'#6b4b2b');R(60,full?124:130,18,5,'#563a20');R(64,full?126:132,10,3,'#2a1a10');
+ if(full){R(60,130,6,4,'#6f86a8');R(72,129,5,4,'#7fb6e0');}
+}
+function drawBath(){
+ R(0,0,320,240,'#000');R(100,8,120,58,'#cfe0e6');for(let x=100;x<220;x+=12)R(x,8,1,58,'#b8ccd4');for(let y=20;y<66;y+=12)R(100,y,120,1,'#b8ccd4');
+ R(100,64,120,168,'#e6eef0');for(let x=100;x<220;x+=16)R(x,64,1,168,'#cdd8dc');for(let y=64;y<232;y+=16)R(100,y,120,1,'#cdd8dc');
+ R(150,10,20,4,'#fff');ctx.fillStyle='rgba(255,255,255,.12)';ctx.fillRect(100,14,120,218);
+ // зеркало и раковина
+ R(116,18,36,34,'#8aa0aa');R(118,20,32,30,'#b8d4e0');R(122,22,6,26,'#d8eef6');
+ if(S.py<140&&S.px<170){drawPat(NS.front.slice(0,10),nPal(),128,24,2,false);}
+ R(116,62,36,18,'#f4f8fa');R(120,64,28,10,'#d0e0e8');R(132,58,4,6,'#9aa');
+ // унитаз
+ R(166,62,28,12,'#f8f8f8');R(168,72,24,20,'#f0f4f4');R(171,75,18,14,'#dfe8ec');
+ R(96,232,128,8,'#2a2440');R(138,228,44,12,'#8e7a63');
+}
+function drawCorr(){
+ R(0,0,320,240,'#000');R(0,40,320,78,'#4e4a3c');R(0,112,320,6,'#3a3628');
+ for(let x=40;x<320;x+=80){R(x,42,16,3,'#bbb48a');ctx.fillStyle='rgba(255,240,180,.06)';ctx.fillRect(x-30,45,76,160);}
+ R(0,118,320,86,'#6c6852');for(let x=0;x<320;x+=20)R(x,118,1,86,'#625e48');
+ R(0,204,320,36,'#2a271c');
+ const door=(x,c,n)=>{R(x,62,36,56,'#3a3428');R(x+3,65,30,53,c);R(x+27,92,3,3,'#d8c070');R(x+10,70,16,7,'#e8e4d0');T(n,x+18,76,'#333',5,'center');};
+ door(10,'#8e7a63','214');door(86,'#7a6e60','216');door(166,'#7a6e60','218');door(246,'#7a6e60','220');
+ for(let i=0;i<6;i++)R(296+i*4,118+i*14,24-i*4,14,i%2?'#55513e':'#4a4636');
+ T('EXIT',306,56,'#5c5',6,'center');
+}
+function drawStreet(){
+ const t=S.t;
+ R(0,0,320,120,'#0c1024');
+ R(0,8,320,112,'#4a2e2a');for(let y=12;y<120;y+=6)for(let x=(y%12?0:6);x<320;x+=12)R(x,y,11,5,'#55342e');
+ for(let i=0;i<6;i++){const x=170+i*24;R(x,20,14,14,(i%3===1)?'#e8c870':'#1a1a2a');R(x,52,14,14,(i===4)?'#e8c870':'#1a1a2a');}
+ R(52,30,92,20,'#2a3a5a');R(54,32,88,16,'#1a2238');T('ОБЩЕЖИТИЕ',98,44,(t>>5)%9===0?'#556':'#9cf',8,'center');
+ R(10,72,32,48,'#2a1a14');R(13,75,26,45,'#6a5440');R(14,76,24,16,'#e8c870');
+ R(0,120,320,80,'#45454e');for(let x=0;x<320;x+=32)R(x,120,1,80,'#3c3c44');
+ R(0,196,320,6,'#8a8a90');R(0,202,320,38,'#1e2128');for(let x=(-(t/2)%40);x<320;x+=40)R(x,222,18,2,'#d8d8c0');
+ for(let i=0;i<8;i++)R(i*42+10,206+(i%3)*8,26,1,'rgba(150,170,220,.25)');
+ // фонарь
+ ctx.fillStyle='rgba(255,220,120,.10)';ctx.beginPath();ctx.moveTo(150,62);ctx.lineTo(110,200);ctx.lineTo(190,200);ctx.closePath();ctx.fill();
+ R(148,62,4,100,'#2a2a30');R(140,58,20,6,'#2a2a30');R(144,63,12,3,'#ffe8a0');R(145,158,10,4,'#2a2a30');
+ if(F.car){R(196,204,96,24,'#d8b830');R(206,196,70,12,'#c8a820');R(210,198,28,9,'#304050');R(242,198,30,9,'#304050');R(230,191,22,6,'#222');T('TAXI',241,196,'#ff0',5,'center');R(204,226,14,6,'#111');R(270,226,14,6,'#111');R(290,210,4,5,'#fff6c0');
+   drawPat(RS.side.slice(0,9),PAL_DRV,214,191,1,true);}
+}
+function drawHall(){
+ R(0,0,320,240,'#000');R(8,8,304,50,'#d4dee4');R(8,52,304,6,'#a8b8c2');R(8,58,304,174,'#e6ebee');
+ for(let x=8;x<312;x+=20)R(x,58,1,174,'#d4dbe0');for(let y=58;y<232;y+=20)R(8,y,304,1,'#d4dbe0');
+ for(let x=40;x<312;x+=70)R(x,10,30,3,'#ffffff');
+ // регистратура
+ drawChar('r',62,76,'down',0,'stand',2,PAL_REG);
+ R(18,62,90,30,'#8aa6b8');R(18,58,90,6,'#b8ccd8');T('РЕГИСТРАТУРА',63,80,'#fff',6,'center');
+ // табло
+ R(112,14,54,32,'#111');T(F.called?'ВАС ВЫЗВАЛИ':'—  —  —',139,26,'#f44',5,'center');T(F.called?'КАБИНЕТ 3':'ОЖИДАНИЕ',139,38,'#4f4',5,'center');
+ // дверь кабинета
+ R(172,14,36,44,'#5a7a92');R(175,17,30,41,'#8fb0c8');R(181,22,18,8,'#fff');T('3',190,29,'#235',6,'center');R(200,38,3,3,'#eee');
+ // автомат с водой
+ R(214,40,26,46,'#5a6a7a');R(218,26,18,16,'#9fd4f4');R(218,26,18,4,'#c8ecff');R(220,58,14,10,'#2a3440');R(224,70,6,4,'#ddd');
+ // окно аптеки
+ R(248,16,40,34,'#6a8a6a');R(251,19,34,22,'#bfe0e8');drawPat(RS.front.slice(0,10),PAL_PH,262,19,1.6,false);R(248,40,40,8,'#d8e8d8');T('АПТЕКА',268,47,'#264',5,'center');R(262,25,1,1,'#bfe0e8');
+ // туалет
+ R(292,14,22,44,'#7a8a9a');R(294,16,18,42,'#a8b8c8');T('WC',303,30,'#234',6,'center');
+ // стулья
+ for(let i=0;i<7;i++){R(60+i*20,132,18,10,'#3a6ab0');R(60+i*20,142,18,10,'#4a7ac8');R(62+i*20,152,2,4,'#333');R(74+i*20,152,2,4,'#333');}
+ drawChar('r',70,154,'down',0,'sit',2,PAL_P1);drawChar('r',190,154,'down',0,'sit',2,PAL_P2);
+ // выход
+ R(136,228,48,12,'#8aa');R(139,230,42,10,'#cfe8f0');R(159,230,2,10,'#8aa');
+}
+function drawCab(){
+ R(0,0,320,240,'#000');R(20,8,280,50,'#cfe3d8');R(20,52,280,6,'#a8c2b4');R(20,58,280,174,'#e2ece4');for(let y=58;y<232;y+=18)R(20,y,280,1,'#d2ded4');
+ R(110,12,26,20,'#eee');R(116,32,14,26,'#999');ctx.fillStyle='rgba(255,255,230,.15)';ctx.fillRect(80,30,90,100);
+ // кушетка
+ R(30,64,72,28,'#6a90a0');R(32,62,68,22,'#eef4f6');R(32,62,16,22,'#ffffff');R(34,92,4,6,'#556');R(94,92,4,6,'#556');
+ // стол с контейнером
+ R(148,62,62,26,'#b8c4c8');R(148,60,62,4,'#d8e0e4');if(!F.q[9]){R(170,50,10,12,'#f8f8f0');R(170,50,10,3,'#e8c84a');R(172,55,6,3,'#fff');}R(186,52,16,8,'#fff');R(188,54,12,1,'#999');
+ // доктор
+ drawChar('r',260,86,'down',0,'sit',2,PAL_DOC);
+ R(228,66,64,26,'#8a6a4a');R(228,62,64,6,'#a8845e');R(236,46,20,16,'#222');R(238,48,16,11,'#4a8ac0');
+ // двери
+ R(36,228,48,12,'#5a7a92');R(39,230,42,10,'#8fb0c8');T('← ХОЛЛ',60,238,'#fff',5,'center');
+ R(236,228,48,12,'#7a8a9a');R(239,230,42,10,'#a8b8c8');T('WC',260,238,'#234',5,'center');
+}
+function drawTaxi(dawn){
+ const t=S.t;
+ R(0,0,320,240,'#0e0c12');
+ const g=ctx.createLinearGradient(0,26,0,112);if(dawn){g.addColorStop(0,'#3a4a80');g.addColorStop(.7,'#c88a8a');g.addColorStop(1,'#f0c890');}else{g.addColorStop(0,'#05070f');g.addColorStop(1,'#141a30');}
+ ctx.fillStyle=g;ctx.fillRect(28,26,264,86);
+ R(28,92,264,20,dawn?'#3a3040':'#0a0c14');
+ for(let i=0;i<9;i++){const x=((i*41-t*1.2)%300+300)%300+20;R(x,96+(i%3)*4,i%2?2:3,2,dawn?'#ffe0a0':'#ffd060');}
+ for(let i=0;i<5;i++){const x=((i*73-t*0.5)%320+320)%320;R(x,84,10,8,dawn?'#4a3a48':'#0a0c18');if(!dawn&&i%2)R(x+3,86,2,2,'#e8c870');}
+ for(let i=0;i<4;i++){const x=((i*90-t*2.2)%340+340)%340-10;R(x,70,3,40,dawn?'#2a2230':'#060810');}
+ R(24,22,272,6,'#1a1820');R(24,110,272,6,'#1a1820');R(24,22,6,94,'#1a1820');R(290,22,6,94,'#1a1820');R(158,22,4,94,'#1a1820');
+ R(10,116,300,100,'#3a2f30');for(let x=30;x<310;x+=40)R(x,118,2,80,'#2e2526');R(10,196,300,44,'#221c1e');
+ drawChar('n',112,160,'right',0,'sit',3,nPal());
+ if(!dawn){R(128,116,6,14,'#7fb6e0');R(129,112,4,4,'#3a6ea8');}else{R(98,138,30,8,'#9b6a42');R(126,116,10,8,'#f4f4f4');R(126,119,10,2,'#c03a3a');}
+ drawChar('r',196,160,'left',0,'sit',3,rPal());
+ R(66,142,26,18,'#6b4b2b');R(71,138,16,5,'#563a20');
+ R(140,4,40,12,'#222');R(143,6,34,8,'#445');drawPat(RS.front.slice(3,6),PAL_DRV,150,6,1.4,false);
+}
+
+/* ================= СЦЕНЫ: ЛОГИКА ================= */
+function hasAll(){const b=F.bag;return b.docs&&b.water&&b.sweater;}
+async function checkBag(){if(!F.q[5]&&hasAll()){quest(5);await say('Руслан',L.packed);S.rus.pose='stand';S.rus.mode='follow';S.rus.y=146;S.trail=[];for(let i=0;i<20;i++)S.trail.push({x:S.rus.x,y:S.rus.y});}}
+const SC={};
+SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
+ walls:()=>[[16,60,94,74],[112,60,20,32],[228,96,74,30],[252,110,24,26],[56,130,26,16]],
+ objs:()=>F.r2?[
+  {n:'Стол',r:[224,80,82,50],act:async()=>{
+    if(!F.glass){const i=await choose(['Взять стакан воды','Отойти']);if(i===0){F.glass=true;await say(null,['* Я беру стакан. Вода прохладная, а не тёплая, как та, что в бутылке.']);}}
+    else if(!F.pill){const i=await choose(['Принять первую таблетку','Отойти']);if(i===0){F.pill=true;await say(null,L.pill);}}
+    else await say(null,['* На столе коробочка с курсом. Завтра — следующая.']);}},
+  {n:'Кровать',r:[16,58,96,80],act:async()=>{
+    if(!F.pill){await say(null,['* Простыни всё те же.','* Сначала вода и первая таблетка. Потом можно лечь.']);return;}
+    await say(null,L.bed2);const i=await choose(['Лечь','Ещё не сейчас']);if(i===0)await ending();}},
+  {n:'Окно',r:[184,10,62,56],act:()=>say(null,F.curtain?['* Штора задвинута. За ней светает без меня.']:['* За стеклом светает.','* Фрибур уже не далеко и не «когда-нибудь». Он был сегодня.'])},
+  {n:'Полочка',r:[124,26,54,40],act:()=>say(null,['* На полочке теперь не остатки фурагина, а нормальное лечение.'])},
+  {n:'Сумка',r:[52,122,34,30],act:()=>say(null,['* Сумка снова у кровати. Руслан донёс её, как обещал.'])},
+  {n:'Туалет',r:[270,10,40,56],act:()=>say(null,['* Снова.','* Тело не спрашивает, удобно ли мне сейчас.','* Но теперь у меня есть курс.'])},
+  {n:'Дверь',r:[136,222,48,24],act:()=>say(null,['* Хватит дорог на сегодня.'])}
+ ]:[
+  {n:'Кровать',r:[16,58,96,80],act:async()=>{
+    const i=await choose(['Осмотреть кровать','Снова завернуться в одеяло','Отойти']);
+    if(i===0)await say(null,L.bed);
+    else if(i===1){F.hid=true;S.pose='lie';await sleep(300);await say(null,['* Я снова заворачиваюсь в одеяло.']);await say(null,L.hideN);await say('Руслан',L.hideR);S.pose='stand';S.px=124;S.py=150;S.dir='left';}}},
+  {n:'Бутылка воды',r:[108,40,28,58],on:()=>!F.bag.water,act:async()=>{
+    await say(null,L.drinkN);await say('Руслан',L.drinkR);F.drank=true;quest(4);F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();}},
+  {n:'Тумбочка',r:[108,56,28,42],on:()=>F.bag.water,act:()=>say(null,['* Пустая тумбочка. Бутылка уже в сумке.'])},
+  {n:'Полочка',r:[124,26,54,40],act:async()=>{
+    if(!F.q[3]){await say(null,L.shelf);quest(3);F.foundMeds=true;return;}
+    if(!F.bag.meds){const i=await choose(['Взять ибупрофен и фурагин в дорогу','Оставить']);if(i===0){F.bag.meds=true;await say(null,['* Ибупрофен и почти пустой фурагин — в сумку. На всякий случай.']);}}
+    else await say(null,['* Полочка пустая. Всё, что было, у меня в сумке.']);}},
+  {n:'Окно',r:[184,10,62,56],act:()=>say(null,L.window)},
+  {n:'Стол',r:[224,88,82,42],act:async()=>{
+    if(!F.bag.docs){F.bag.docs=true;await say(null,['* На столе документы, телефон, зарядка и кошелёк.','* Всё это — в сумку.']);await checkBag();}
+    else await say(null,['* На столе пусто. Только кружка со вчерашнего вечера.']);}},
+  {n:'Стул',r:[248,104,32,36],act:async()=>{
+    if(!F.bag.sweater){F.bag.sweater=true;await say(null,['* На спинке стула тёплая кофта. Беру — в сумку.']);await checkBag();}
+    else await say(null,['* Обычный стул. Кофта уже в сумке.']);}},
+  {n:'Сумка',r:[52,122,34,30],act:async()=>{
+    if(F.q[5]){await say(null,['* Сумка собрана: документы, телефон, зарядка, кошелёк, вода, тёплая кофта.']);return;}
+    await say(null,L.bagEmpty);const m=[];if(!F.bag.docs)m.push('документы, телефон, зарядка, кошелёк — на столе');if(!F.bag.water)m.push('вода — на тумбочке');if(!F.bag.sweater)m.push('тёплая кофта — на стуле');
+    if(m.length)await say(null,['* Мне ещё нужно взять: '+m.join('; ')+'.']);}},
+  {n:'Дверь в туалет',r:[270,10,40,56],act:()=>go('bath',160,214,'up')},
+  {n:'Входная дверь',r:[136,222,48,24],act:async()=>{
+    if(!(F.q[1]&&F.q[2]&&F.q[3]&&F.q[4]&&F.q[5])){await say(null,L.doorEarly);await say('Руслан',L.doorRus);return;}
+    quest(6);await go('corr',30,150,'right');}}
+ ],
+ rusAct:async()=>{
+  if(F.r2){const i=await choose(['Поговорить','Обнять его','Попросить задвинуть штору','Осмотреть Руслана']);
+   if(i===0)await say('Руслан',L.table);
+   else if(i===1){F.hug=true;await say(null,['* Я обнимаю его. Он выдыхает мне в макушку.']);await say('Руслан',['* Зайка моя, я здесь.']);}
+   else if(i===2){F.curtain=true;await say(null,['* Руслан задвигает штору. В комнате становится мягко и темно.']);await say('Руслан',['* Я никуда не уйду.']);}
+   else await say(null,L.exRus2);return;}
+  if(!F.q[1]){await say('Руслан',L.rusTalk);F.talked=true;quest(1);return;}
+  const opts=[F.foundMeds&&!F.shown?'Показать лекарства':'Поговорить','Осмотреть Руслана','Ничего'];
+  const i=await choose(opts);
+  if(i===0){if(F.foundMeds&&!F.shown){F.shown=true;await say('Руслан',L.meds);}else await rusPause();}
+  else if(i===1){F.exR=(F.exR||0)+1;await say(null,F.exR>=3?L.exRus2:L.exRus);}
+ }};
+SC.bath={walk:true,draw:drawBath,bounds:[100,66,120,164],walls:()=>[[166,60,28,32],[116,60,36,20]],
+ setup(){S.rus.vis=false;},
+ objs:()=>[
+  {n:'Туалет',r:[162,56,36,42],act:async()=>{
+    if(!F.q[2]){S.dim=1;await say(null,L.toilet);S.dim=0;quest(2);F.needRusToilet=true;}
+    else{S.dim=1;await say(null,L.toiletAgain);S.dim=0;}}},
+  {n:'Зеркало',r:[112,14,44,70],act:()=>say(null,L.mirror)},
+  {n:'Дверь',r:[136,222,48,24],act:async()=>{await go('room',290,74,'down',true);S.rus.vis=true;if(F.needRusToilet){F.needRusToilet=false;await say('Руслан',L.toiletRus);}}}
+ ]};
+SC.corr={walk:true,draw:drawCorr,bounds:[0,122,320,82],walls:()=>[],
+ enter:async()=>{await say(null,L.corr);await say('Руслан',L.corrRus);},
+ objs:()=>[
+  {n:'Моя дверь',r:[8,58,40,70],act:()=>say('Руслан',['* Только не назад. Назад нас снова уговорит подушка.'])},
+  {n:'Чужая дверь',r:[84,58,40,70],act:()=>say(null,['* Чужая дверь. За ней кто-то спит и не знает, что сегодня у меня за ночь.'])},
+  {n:'Чужая дверь',r:[164,58,40,70],act:()=>say(null,['* Здесь тихо играет музыка. Чужое спокойствие.'])},
+  {n:'Чужая дверь',r:[244,58,40,70],act:()=>say(null,['* Ещё одна дверь. Мне к выходу.'])}
+ ],
+ triggers:()=>[{r:[300,118,20,90],fn:()=>go('street',30,132,'right')}],
+ rusAct:()=>rusPause()};
+SC.street={walk:true,draw:drawStreet,bounds:[0,124,320,76],walls:()=>[[146,150,8,12]],
+ enter:async()=>{await say(null,L.street1);S.hoodie=true;await say(null,L.street2);await say('Руслан',L.streetR);},
+ objs:()=>[
+  {n:'Дверь общаги',r:[8,66,40,62],act:()=>say('Руслан',['* Только не назад. Назад нас снова уговорит подушка.'])},
+  {n:'Вывеска общаги',r:[50,26,98,100],act:()=>say(null,['* Вывеска общаги. Пара букв мигает.','* Сегодня я от неё ухожу, а не прячусь за ней.'])},
+  {n:'Фонарь',r:[138,130,24,40],act:()=>say(null,['* Фонарь гудит над мокрым асфальтом. Свет жёлтый и сонный.'])},
+  {n:'Край дороги',r:[0,194,320,30],act:taxiCall}
+ ],
+ rusAct:()=>rusPause()};
+async function taxiCall(){
+ const i=await choose(['Поднять руку у края дороги','Вызвать машину в телефоне','Посмотреть на дорогу','Посмотреть в телефон']);
+ if(i===2){await say(null,['* Мокрый асфальт блестит. Машин почти нет. Но одна нам нужна.']);return;}
+ if(i===3){await say(null,['* На экране время, на которое лучше не смотреть. И приложение такси.']);return;}
+ await say(null,[i===0?'* Я поднимаю руку. Через минуту у бордюра тормозит машина.':'* Я вызываю такси в телефоне. Пальцы мёрзнут. Машина приезжает быстро.']);
+ F.car=true;await sleep(300);
+ await say('Водитель',['* Добрый... куда?']);await say('Руслан',['* Во Фрибур, пожалуйста. В больницу, HFR.']);
+ await say('Водитель',['* Садитесь. Если станет плохо — скажите, остановлюсь.']);await say('Руслан',L.board);
+ quest(7);S.rus.mode='hidden';await go('taxi1',0,0,'down');
+}
+SC.taxi1={walk:false,draw:()=>drawTaxi(false),
+ enter:async()=>{
+  await say(null,L.taxiBg);let acts=0,asked=false,ti=0;
+  for(;;){const i=await choose(['Поговорить с Русланом','Смотреть в окно','Пить воду','Молчать','Ехать дальше']);
+   if(i===0){if(ti<L.taxiTalk.length)await say('Руслан',L.taxiTalk[ti++]);else await rusPause();acts++;}
+   else if(i===1){await say(null,L.taxiWin);await say('Руслан',L.taxiWinR);acts++;}
+   else if(i===2){await say(null,L.taxiWater);await say('Руслан',L.taxiWaterR);acts++;}
+   else if(i===3){await say('Руслан',L.taxiSilent);acts++;}
+   else{if(acts<2){await say(null,['* Дорога ещё длинная. Мы только выехали.']);continue;}break;}
+   if(acts>=2&&!asked){asked=true;await say('Водитель',['* Там сзади всё в порядке?']);const j=await choose(['Ответить самой','Пусть ответит Руслан']);await say(j===0?'Ника':'Руслан',L.driverOk);if(j===0)F.spoke=true;}
+  }
+  await say(null,L.arrive);await say('Руслан',L.arriveR);S.rus.mode='follow';await go('hall',160,214,'up');}};
+SC.hall={walk:true,draw:drawHall,bounds:[8,60,304,168],walls:()=>[[18,56,90,36],[214,40,26,46],[60,132,140,24]],
+ setup(){if(S.rus.mode!=='follow'){S.rus.mode='follow';}S.rus.vis=true;},
+ enter:async()=>{if(F.hallSeen)return;F.hallSeen=true;await say(null,L.hall);await say('Руслан',L.hallR);},
+ objs:()=>[
+  {n:'Регистратура',r:[16,52,94,46],act:async()=>{
+    if(F.q[8]){await say(null,['* Регистратор уже записал меня. Теперь ждать.']);return;}
+    await say('Регистратор',['* Здравствуйте. Что случилось?']);
+    const i=await choose(['Коротко и прямо: боль, кровь, поясница','Тихо и путано','«Мне просто плохо»']);
+    if(i===0){F.spoke=true;await say('Ника',['* Мне больно, когда я хожу в туалет. Там кровь. И болит поясница.']);}
+    else if(i===1){await say('Ника',['* Я... там... ну, больно. И ещё... ']);await say('Руслан',L.recHelp);}
+    else{await say('Ника',['* Мне просто плохо.']);await say('Регистратор',['* Что именно беспокоит?']);await say('Руслан',L.recHelp);}
+    await say('Регистратор',L.recOk);quest(8);await say('Руслан',L.recAfter);}},
+  {n:'Табло',r:[110,8,58,60],act:()=>say(null,F.called?L.called:['* На табло вызовы. Меня пока нет.'])},
+  {n:'Кабинет 3',r:[170,8,40,60],act:async()=>{
+    if(!F.called){await say(null,['* Кабинет 3. Пока не моя очередь.']);return;}
+    S.rus.mode='hidden';await go('cab',60,214,'up');}},
+  {n:'Автомат с водой',r:[210,36,34,56],act:async()=>{await say(null,['* Пластиковый стаканчик. Вода из автомата холодная.','* Я пью маленькими глотками.']);await say('Руслан',['* Воду. Хотя бы несколько глотков.']);}},
+  {n:'Окно аптеки',r:[246,8,42,60],act:pharmacy},
+  {n:'Туалет',r:[290,8,26,60],act:async()=>{S.dim=1;await say(null,L.hospToilet);S.dim=0;}},
+  {n:'Стулья',r:[56,128,148,32],act:async()=>{
+    if(!F.q[8]){await say(null,['* Сначала регистратура.']);return;}
+    if(F.called){await say(null,['* Меня уже вызвали.']);return;}
+    S.pose='sit';S.px=120;S.py=154;S.dir='down';S.rus.mode='static';S.rus.x=140;S.rus.y=154;S.rus.pose='sit';S.rus.dir='down';
+    await say(null,L.wait);await say('Руслан',L.waitR);
+    const i=await choose(['Положить голову ему на плечо','Просто сидеть рядом']);
+    await say(null,[i===0?'* Я кладу голову ему на плечо.':'* Я сижу рядом. Его колено касается моего.']);
+    await sleep(400);F.called=true;blip(null,880);await say(null,L.called);await say('Руслан',L.calledR);
+    S.pose='stand';S.py=170;S.rus.pose='stand';S.rus.y=170;S.rus.mode='follow';S.trail=[];for(let k=0;k<20;k++)S.trail.push({x:140,y:170});}},
+  {n:'Выход',r:[136,222,48,24],act:async()=>{
+    if(!F.q[10]){await say('Руслан',['* Солнышко, давай не будем это терпеть.','* Давай, милая. Следующий маленький шаг, не вся жизнь сразу.']);return;}
+    S.rus.mode='hidden';await go('taxi2',0,0,'down');}}
+ ],
+ rusAct:async()=>{if(F.q[8]&&!F.called)await say('Руслан',L.recAfter.slice(1));else await rusPause();}};
+async function pharmacy(){
+ if(!F.prescribed){await say(null,['* Окно выдачи. Пока мне здесь нечего получать.']);return;}
+ if(F.q[10]){await say(null,['* Коробочка у меня. Можно домой.']);return;}
+ await say('Сотрудник аптеки',L.phStaff);
+ const i=await choose(['Взять пакет','У меня дрожат руки','Замереть над коробкой']);
+ if(i===0){await say(null,L.phBox);await say('Руслан',L.phRus.slice(1));}
+ else if(i===1){await say(null,['* Руки дрожат. Руслан берёт пакет и сразу отдаёт мне — чтобы это было моё лекарство, не его трофей.']);await say(null,L.phBox);await say('Руслан',L.phRus);}
+ else{await say(null,L.phBox);await say(null,['* Я замираю над коробкой.']);await say('Руслан',L.phFreeze);}
+ quest(10);
+}
+SC.cab={walk:true,draw:drawCab,bounds:[20,62,280,166],walls:()=>[[30,62,72,32],[148,62,62,26],[228,62,64,32],[124,98,16,10]],
+ setup(){S.rus.mode='static';S.rus.vis=!!F.rusIn;S.rus.x=60;S.rus.y=226;S.rus.dir='up';S.rus.pose='stand';},
+ enter:async()=>{if(F.cabSeen)return;F.cabSeen=true;await say('Медсестра',L.nurse);await say('Руслан',L.rusDoor);},
+ npcDraw:()=>drawChar('r',132,108,'down',0,'stand',2,PAL_NUR),
+ objs:()=>[
+  {n:'Медсестра',r:[118,80,30,36],act:()=>say('Медсестра',F.q[9]?['* Спасибо. Дальше — к врачу.']:['* Туалет напротив. Контейнер вот. Подпишите.','* Ничего страшного. Как получится.'])},
+  {n:'Контейнер',r:[144,44,70,50],act:()=>say(null,F.q[9]?['* Контейнер уже подписан и отдан.']:['* Контейнер для анализа. Я пишу на этикетке своё имя.'])},
+  {n:'Кушетка',r:[26,58,80,42],act:()=>say(null,['* Кушетка в белой бумаге. Сегодня на неё можно не ложиться — сначала анализ.'])},
+  {n:'Лампа',r:[106,8,34,52],act:()=>say(null,['* Лампа светит прямо и честно. Здесь ничего не спрятать, и не надо.'])},
+  {n:'Врач',r:[224,58,72,42],act:doctor},
+  {n:'Туалет',r:[236,222,48,24],act:async()=>{
+    if(F.q[9]){await say(null,['* Анализ уже сдан.']);return;}
+    S.dim=1;await say(null,L.analysis);S.dim=0;quest(9);}},
+  {n:'В холл',r:[36,222,48,24],act:async()=>{
+    if(F.q[9]&&!F.prescribed){await say(null,['* Сначала врач.']);return;}
+    S.rus.mode='follow';await go('hall',190,74,'down');}}
+ ],
+ rusAct:()=>say('Руслан',['* Я тут, солнышко.'])};
+async function doctor(){
+ if(!F.q[9]){await say('Врач',['* Сначала анализ, потом поговорим.']);return;}
+ if(F.prescribed){await say('Врач',['* Окно выдачи в холле. Курс — до конца.']);return;}
+ await say('Врач',L.doc.slice(0,3));
+ const i=await choose(['Спросить: «Это опасно?»','Промолчать']);
+ if(i===0)await say('Ника',['* Это опасно?']);else await say(null,['* Я молчу и киваю.']);
+ await say('Врач',[L.doc[3]]);
+ const j=await choose(['Позвать Руслана в кабинет','Не звать']);
+ if(j===0){F.rusIn=true;S.rus.vis=true;S.rus.x=60;S.rus.y=206;S.rus.dir='up';await say('Руслан',L.docRus);}
+ await say(null,['* Врач выписывает мне антибиотики. Направление — в окно выдачи при больнице.']);F.prescribed=true;
+}
+SC.taxi2={walk:false,draw:()=>drawTaxi(true),
+ enter:async()=>{
+  await say(null,L.back);let ti=0,acts=0;
+  for(;;){const i=await choose(['Поговорить с Русланом','Поблагодарить его','Смотреть в окно','Ехать дальше']);
+   if(i===0){if(ti<L.backTalk.length)await say('Руслан',L.backTalk[ti++]);else await rusPause();acts++;}
+   else if(i===1){F.thanked=true;await say('Ника',['* Спасибо, что поехал со мной.']);await say('Руслан',L.thanks);acts++;}
+   else if(i===2){await say(null,L.backWin);acts++;}
+   else{if(acts<1){await say(null,['* Ещё не общага. Ещё поля.']);continue;}break;}
+  }
+  await say(null,L.home);await say('Руслан',L.homeR);
+  F.r2=true;S.rus.mode='static';await go('room',160,214,'up');}};
+SC.room.setup=function(){if(F.r2){S.rus.vis=true;S.rus.mode='static';S.rus.pose='stand';S.rus.x=216;S.rus.y=138;S.rus.dir='right';}};
+SC.room.enter=async function(){if(F.r2&&!F.q[11]){quest(11);await sleep(300);await say('Руслан',L.table);}};
+
+async function ending(){
+ await fadeOut();S.pose='lie';S.px=60;S.py=100;S.rus.x=98;S.rus.y=140;S.rus.pose='sit';S.rus.dir='down';S.rus.mode='static';S.rus.vis=true;F.curtain=true;S.control=false;
+ await fadeIn();quest(12);
+ await say(null,L.end1);await say('Руслан',L.end2);await say(null,L.end3);
+ const warm=F.talked&&F.drank&&!F.hid&&F.thanked;
+ if(warm){await say('Руслан',L.warmR);await say(null,L.warmN);}
+ await say(null,L.fin);
+ await fadeOut();
+ const tt=$('title');tt.innerHTML='<div class="heart">&#10084;</div><h1>НЕ ТЕРПИ</h1><div class="sub">Конец.</div><div class="ctl">'+(warm?'Тёплый финал':'Обычный финал')+'<br>'+(warm?'':'(тёплый: поговорить с Русланом, выпить воды, не прятаться в кровать в начале, поблагодарить его)<br>')+'Задачи: '+F.q.filter(Boolean).length+' / 12</div><div class="go">[ Z / Enter — сыграть снова ]</div>';
+ tt.classList.remove('hidden');$('hud').classList.add('hidden');$('hint').classList.add('hidden');G.started=false;fadeEl.style.opacity=0;
+}
+
+/* ================= МЕНЮ ================= */
+async function openMenu(){
+ const o=['Задачи','Осмотреть себя'];if(S.hoodie&&S.scene==='room'&&F.r2)o.push('Снять его толстовку');o.push('Закрыть');
+ const i=await choose(o);const s=o[i];
+ if(s==='Задачи'){const c=curQuest();let h='<h2>Задачи</h2>';for(let k=1;k<=12;k++)h+='<div class="q '+(F.q[k]?'done':(k===c?'cur':''))+'">'+(F.q[k]?'✓ ':(k===c?'▶ ':'· '))+k+'. '+QN[k]+'</div>';h+='<div class="foot">Дверь из комнаты откроется, когда выполнены задачи 1–5. Z — закрыть.</div>';await showPanel(h);}
+ else if(s==='Осмотреть себя'){const l=L.self.slice();if(S.hoodie)l.push('* Поверх рубашки — его коричневая толстовка. Рукава длиннее моих рук.');await say(null,l);}
+ else if(s==='Снять его толстовку'){S.hoodie=false;F.hoodieOnChair=true;await say(null,['* Я снимаю его толстовку и вешаю на спинку стула. Ворот белой рубашки под ней совсем смялся.']);}
+}
+
+/* ================= ИГРОВОЙ ЦИКЛ ================= */
+function rectHit(x,y,r){return x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];}
+function blocked(x,y){const sc=SC[S.scene],b=sc.bounds;if(x-7<b[0]||x+7>b[0]+b[2]||y-6<b[1]||y>b[1]+b[3])return true;
+ for(const w of sc.walls())if(x+7>w[0]&&x-7<w[0]+w[2]&&y>w[1]&&y-6<w[1]+w[3])return true;return false;}
+function findTarget(){
+ const sc=SC[S.scene];if(!sc.walk)return null;const v=DV[S.dir];const fx=S.px+v[0]*14,fy=S.py-4+v[1]*14;
+ if(S.rus.vis&&S.rus.mode!=='hidden'&&sc.rusAct){const d1=Math.hypot(fx-S.rus.x,fy-(S.rus.y-8)),d2=Math.hypot(S.px-S.rus.x,S.py-S.rus.y);if(d1<16||d2<22)return{n:'Руслан',act:sc.rusAct};}
+ for(const o of sc.objs())if((!o.on||o.on())&&rectHit(fx,fy,o.r))return o;
+ return null;}
+function interact(){const t=findTarget();if(t)run(t.act);}
+function startGame(){resetState();fadeEl.style.opacity=1;run(async()=>{
+ S.scene='room';await fadeIn();await say(null,L.start);S.pose='stand';S.px=124;S.py=150;S.dir='left';S.control=true;$('hud').classList.remove('hidden');});}
+function update(){
+ S.t++;const sc=SC[S.scene];
+ if(S.control&&!busy&&!D&&!panelRes&&sc.walk&&S.pose==='stand'){
+  let dx=0,dy=0;if(keys.left)dx-=1;if(keys.right)dx+=1;if(keys.up)dy-=1;if(keys.down)dy+=1;
+  if(dx||dy){const sp=1.6;if(dx&&dy){dx*=.72;dy*=.72;}
+   if(dy)S.dir=dy<0?'up':'down';if(dx&&(!dy||Math.abs(dx)>=Math.abs(dy)))S.dir=dx<0?'left':'right';
+   const nx=S.px+dx*sp,ny=S.py+dy*sp;if(!blocked(nx,S.py))S.px=nx;if(!blocked(S.px,ny))S.py=ny;
+   S.ft++;S.frame=(S.ft>>3)&1;S.trail.push({x:S.px,y:S.py});if(S.trail.length>60)S.trail.shift();
+   if(sc.triggers)for(const tr of sc.triggers())if(rectHit(S.px,S.py,tr.r)){run(tr.fn);break;}
+  }else S.frame=0;
+  if(S.scene==='room'&&!F.r2&&!F.q[1]&&!F.idleDone){S.idle++;if(S.idle>60*14){F.idleDone=true;run(()=>say('Руслан',L.rusIdle));}}
+ }
+ const r=S.rus;
+ if(r.mode==='follow'&&sc.walk){const tg=S.trail[Math.max(0,S.trail.length-16)]||{x:r.x,y:r.y};const dx=tg.x-r.x,dy=tg.y-r.y,d=Math.hypot(dx,dy),dn=Math.hypot(S.px-r.x,S.py-r.y);
+  if(d>1.5&&dn>20){const m=Math.min(2,d);r.x+=dx/d*m;r.y+=dy/d*m;r.ft++;r.frame=(r.ft>>3)&1;r.dir=Math.abs(dx)>Math.abs(dy)?(dx<0?'left':'right'):(dy<0?'up':'down');}
+  else{r.frame=0;const fx=S.px-r.x,fy=S.py-r.y;r.dir=Math.abs(fx)>Math.abs(fy)?(fx<0?'left':'right'):(fy<0?'up':'down');}}
+ // HUD
+ const hud=$('hud'),hint=$('hint');
+ if(G.started&&S.control){const c=curQuest();hud.textContent=c?('Задача: '+QN[c]):'Все задачи выполнены';hud.classList.remove('hidden');
+  const t=(!busy&&!D)?findTarget():null;if(t){hint.textContent='Z — '+t.n;hint.classList.remove('hidden');}else hint.classList.add('hidden');}
+ else hint.classList.add('hidden');
+}
+function draw(){
+ ctx.setTransform(2,0,0,2,0,0);ctx.imageSmoothingEnabled=false;
+ const sc=SC[S.scene];sc.draw();
+ if(sc.walk){
+  const ents=[];
+  if(S.pose!=='lie')ents.push({y:S.py,f:()=>drawChar('n',S.px,S.py,S.dir,S.frame,S.pose,2,nPal())});
+  if(S.rus.vis&&S.rus.mode!=='hidden'&&!(S.scene==='bath'))ents.push({y:S.rus.y,f:()=>drawChar('r',S.rus.x,S.rus.y,S.rus.dir,S.rus.frame,S.rus.pose,2,rPal())});
+  if(sc.npcDraw)ents.push({y:108,f:sc.npcDraw});
+  ents.sort((a,b)=>a.y-b.y).forEach(e=>e.f());
+  if(S.scene==='room'&&S.pose==='lie'){/* поза лёжа нарисована в комнате */}
+ }
+ if(S.dim){ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,0,320,240);}
+ if(F.r2&&S.scene==='room'&&F.curtain&&S.pose==='lie'){ctx.fillStyle='rgba(10,10,40,.35)';ctx.fillRect(0,0,320,240);}
+}
+function loop(){try{update();draw();}catch(e){console.error(e);}requestAnimationFrame(loop);}
+fadeEl.style.opacity=0;loop();
+</script>
+</body>
+</html>
