@@ -71,7 +71,7 @@ body:not(.touch) #touch{display:none}
     <div class="heart">&#10084;</div>
     <h1>НЕ ТЕРПИ</h1>
     <div class="sub">маленькая игра про одну длинную ночь</div>
-    <div class="ctl">Поверни телефон горизонтально<br>Джойстик — идти<br>Z — действие, дальше<br>X — быстрее текст<br>C — меню: задачи, осмотреть себя</div>
+    <div class="ctl">Поверни телефон горизонтально<br>Джойстик — идти<br>Z — действие, дальше<br>X — быстрее текст / отмена<br>I / C — меню: вещи, задачи, осмотреть себя<br>X — назад, закрыть</div>
     <div class="go" id="startBtn">[ Нажми здесь / Z — начать ]</div>
   </div>
 </div>
@@ -153,7 +153,7 @@ phBox:["* Коробочка лёгкая. Слишком лёгкая для в
 phStaff:["* Вот ваш препарат. Курс как указано. Не бросать на середине, даже если станет легче.","* Воды побольше. Отдых."],
 phRus:["* Держи, зайка моя.","* Видишь? Мы доехали. Мы попросились. Нам дали то, что нужно.","* Теперь домой. И первую таблетку — как только окажемся в комнате. Можно раньше, если скажешь, что не терпится."],
 phFreeze:["* Солнышко. Это не слабость.","* Это ты себя не бросила.","* Давай, милая. Я вызову такси."],
-back:["* Дорога та же, только я уже не еду в неизвестность.","* Я еду домой с коробкой, ради которой стоило встать.","* В окне всё светлее. На коленях лежит его толстовка, если я верну её не сразу."],
+back:["* Дорога та же, только я уже не еду в неизвестность.","* Я еду домой с коробкой, ради которой стоило встать.","* В окне всё светлее. Его толстовка всё ещё на мне. Верну её не сразу."],
 backTalk:[["* Можешь закрыть глаза. Я не дам нам проехать общагу.","* Гордись собой, зайка. Серьёзно."],["* Многие бы ещё сутки уговаривали себя, что «утро вечера мудренее».","* А ты поехала."],["* Я очень рад, что ты меня послушала. И ещё больше — что ты себя послушала."]],
 thanks:["* Конечно, солнышко.","* Куда я денусь.","* Ты бы для меня то же сделала. Я знаю."],
 backWin:["* Огни редеют.","* Скоро знакомый фонарь у общаги."],
@@ -227,6 +227,7 @@ document.querySelectorAll('#touch .b').forEach(b=>{const k=b.dataset.k;
 let panelRes=null;
 function press(k){
  initAudio();tryLandscape();
+ if(S)S.idle=0;
  if(!$('title').classList.contains('hidden')){ if(k==='ok'&&!G.started){G.started=true;$('title').classList.add('hidden');startGame();} return;}
  if(panelRes){if(k==='ok'||k==='back'||k==='menu'){const r=panelRes;panelRes=null;$('panel').classList.add('hidden');r();}return;}
  if(D){dlgKey(k);return;}
@@ -250,11 +251,11 @@ function renderCh(){chEl.innerHTML='';D.opts.forEach((o,i)=>{const d=document.cr
 function dlgKey(k){
  if(D.mode==='say'){
   if(D.typing){if(k==='ok'||k==='back'){clearInterval(D.t);D.typing=false;txt.textContent=D.full;}return;}
-  if(k==='ok'){D.i++;if(D.i>=D.lines.length)closeDlg();else showLine();}
+  if(k==='ok'||k==='back'){D.i++;if(D.i>=D.lines.length)closeDlg();else showLine();}
  }else{
   if(k==='up'){D.sel=(D.sel+D.opts.length-1)%D.opts.length;renderCh();blip(null,600);}
   else if(k==='down'){D.sel=(D.sel+1)%D.opts.length;renderCh();blip(null,600);}
-  else if(k==='ok'){const r=D.res,s=D.sel;D=null;setTimeout(()=>{if(!D)box.classList.add('hidden');},30);blip(null,800);r(s);}
+  else if(k==='ok'||k==='back'||k==='menu'){const r=D.res,s=(k==='ok')?D.sel:-1;D=null;setTimeout(()=>{if(!D)box.classList.add('hidden');},30);blip(null,k==='ok'?800:420);r(s);}
  }
 }
 function showPanel(html){return new Promise(r=>{const p=$('panel');p.innerHTML=html;p.classList.remove('hidden');panelRes=r;});}
@@ -269,23 +270,25 @@ function toast(s){const t=$('toast');t.textContent=s;t.classList.add('on');clear
 /* ================= СПРАЙТЫ ================= */
 const P12=r=>r.map(x=>(x+'............').slice(0,12));
 const NS={
-front:P12(["...HHHHHH...","..HHHHHHHH..",".HHBBHHHHHH.",".HBBSSSSSSH.",".HBGGGSGGGH.",".HBGEGSGEGH.",".HBSSSSSSSH.",".HHSSLLSSHH.",".HH.SSSS.HH.",".HWWPKKPWWH.",".WWWKPPKWWW.",".WWWKKKKWWW.",".SWWKKKKWWS.","..WWKKKKWW.."]),
-back:P12(["...HHHHHH...","..HHHHHHHH..",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".WHHHHHHHHW.",".WWHHHHHHWW.",".WWWHHHHWWW.",".SWWWHHWWWS.","..WWWWWWWW.."]),
-side:P12(["....HHHHH...","...HHHHHHH..","..BBHHHHHHH.","..BSSSHHHHH.",".GGGSSHHHHH.",".GEGSSHHHHH.","..SSSSHHHHH.","..LSSSHHHHH.","...SSHHHHHH.","...WKKWHHHH.","...WPKWWHHH.","...WKKWWHH..","...SKKWWW...","...WKKWW...."])};
+front:P12(["...HHHHHH...","..HHHHHHHH..",".HHBBHHHBHH.",".HBBSSSSSSH.",".HBGGGGGGGH.",".HBGEGSGEGB.",".HBSSSSSSSB.",".HHSSLLSSBH.",".HH.SSSS.BH.",".HWWPKKPWWH.",".WWWKKKKWWW.",".WWWKKKKWWW.",".SWWKKKKWWS.","..WWKKKKWW.."]),
+back:P12(["...HHHHHH...","..HHHHHHHH..",".HHHHHHHHHH.",".HHHHHHHHHH.",".BHHHHHHHHB.",".BHHHHHHHHB.",".HBHHHHHHBH.",".HHHHHHHHHH.",".HHHHHHHHHH.",".WHHHHHHHHW.",".WWHHHHHHWW.",".WWWHHHHWWW.",".SWWWHHWWWS.","..WWWWWWWW.."]),
+side:P12(["....HHHHH...","...HHHHHHH..","..BBHHHHHHH.","..BSSSHHHHH.",".GGGSSHHHHH.",".GEGSSHHBHH.","..SSSSHHBHH.","..LSSSHHHBH.","...SSHHHHHH.","...WKKWHHHH.","...WPKWWHHH.","...WKKWWHH..","...SKKWWW...","...WKKWW...."])};
 const RS={
-front:P12(["..R.RRR.R...",".RRRRRRRRR..",".RRRRRRRRRR.",".RRSSSSSSRR.",".RSSESSESSR.","..SSSSSSSS..","..DSSSSSSD..","..DDSDDSDD..","...DDDDDD...",".OOOOOOOOOO.","OOOOOooOOOOO","OOOOOooOOOOO","OOOOOOOOOOOO","SOOOOOOOOOOS",".OOOOOOOOOO."]),
+front:P12(["..R.RRR.R...",".RRRRRRRRR..",".RRRRRRRRRR.",".RRSSSSSSRR.",".RSSESSESSR.","..SSSSSSSS..","..DSSSSSSD..","..SDSSSSDS..","...SDSDSS...",".OOOOOOOOOO.","OOOOOooOOOOO","OOOOOooOOOOO","OOOOOOOOOOOO","SOOOOOOOOOOS",".OOOOOOOOOO."]),
 back:P12(["..R.RRR.R...",".RRRRRRRRR..",".RRRRRRRRRR.",".RRRRRRRRRR.",".RRRRRRRRRR.","..RRRRRRRR..","..SSSSSSSS..","..SSSSSSSS..","...SSSSSS...",".OOOOOOOOOO.","OOOOOOOOOOOO","OOOOOOOOOOOO","OOOOOOOOOOOO","SOOOOOOOOOOS",".OOOOOOOOOO."]),
-side:P12(["...RRRR.R...","..RRRRRRRR..",".RRRRRRRRRR.",".SSSRRRRRRR.",".SESSSRRRR..",".SSSSSRRRR..",".DSSSSSRR...",".DDDDSSS....","..DDDSSS....","..OOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".SOOOOOOOO..","..OOOOOOOO.."])};
+side:P12(["...RRRR.R...","..RRRRRRRR..",".RRRRRRRRRR.",".SSSRRRRRRR.",".SESSSRRRR..",".SSSSSRRRR..",".SSSSSSRR...",".SDSDSSS....","..SSDSSS....","..OOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".OOOOOOOOO..",".SOOOOOOOO..","..OOOOOOOO.."])};
 const LEGA=P12(["..JJJJJJJJ..","..JJJ..JJJ..","..JJJ..JJJ..","..JJ....JJ..","..FF....FF.."]);
 const LEGB=P12(["..JJJJJJJJ..","..JJJ..JJJ..","..JJ....JJ..",".JJ......JJ.",".FF......FF."]);
 const LEGS=P12(["..JJJJJJJJ..","..JJJJJJJJ..","..FF....FF.."]);
-const PAL_N={H:'#2b1d18',B:'#e6cf86',S:'#f2c9a8',G:'#c8d4de',E:'#3a2a22',L:'#5b1a2e',W:'#f4f4f0',K:'#141414',P:'#e8c84a',J:'#2f3550',F:'#151515'};
+const PAL_N={H:'#2b1d18',B:'#e6cf86',S:'#f2c9a8',G:'#5a5f6a',E:'#3a2a22',L:'#5b1a2e',W:'#f4f4f0',K:'#141414',P:'#e8c84a',J:'#2f3550',F:'#151515'};
 const PAL_NH=Object.assign({},PAL_N,{W:'#9b6a42'});
-const PAL_R={R:'#7b4a28',S:'#e8b994',E:'#4a2a12',D:'#5e3b22',O:'#a8794e',o:'#8a5f3a',J:'#3a3a42',F:'#1a1a1a'};
+const PAL_R={R:'#7b4a28',S:'#e8b994',E:'#6b3e1e',D:'#a07a5a',O:'#a8794e',o:'#8a5f3a',J:'#3a3a42',F:'#1a1a1a'};
 const PAL_R2=Object.assign({},PAL_R,{O:'#d2b78e',o:'#b89a72'});
 const PAL_DRV={R:'#2a2a2a',S:'#d9a77f',E:'#222',D:'#d9a77f',O:'#2d3b55',o:'#24304a',J:'#222',F:'#111'};
 const PAL_REG={R:'#1e1e24',S:'#e3b896',E:'#222',D:'#e3b896',O:'#5a7fa0',o:'#4b6c8a',J:'#334',F:'#111'};
-const PAL_NUR={R:'#c9a04a',S:'#f0c8a8',E:'#335',D:'#f0c8a8',O:'#eef4f8',o:'#bcd6e4',J:'#7fb0c8',F:'#eee'};
+const NURSE=P12(["....CCCC....","...CCxCCC...","..HHHHHHHH..",".HHSSSSSSHH.",".HSSESSESSH.",".HSSSSSSSSH.",".HHSSLLSSHH.","HHH.SSSS.HHH","HH.OOOOOO.HH","..OOOOooOO..",".SOOOOOOOOS.",".SOoOOOOoOS.","..OOOOOOOO..",".OOOOOOOOOO.","OOOOOOOOOOOO","...SS..SS...","...SS..SS...","...FF..FF..."]);
+const PAL_NUR={C:'#ffffff',x:'#d03a3a',H:'#c9a04a',S:'#f0c8a8',E:'#335',L:'#c0607a',O:'#eef4f8',o:'#9cc4da',F:'#e8eef2'};
+function drawNurse(x,y,s){s=s||2;const h=NURSE.length*s;ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x-5*s,y-s,10*s,2*s);drawPat(NURSE,PAL_NUR,x-6*s,y-h,s,false);}
 const PAL_DOC={R:'#6a6a6a',S:'#e0b090',E:'#223',D:'#9a9a9a',O:'#f4f6f8',o:'#c8d0d8',J:'#555',F:'#222'};
 const PAL_PH={R:'#8a3a2a',S:'#f0c6a0',E:'#222',D:'#f0c6a0',O:'#e8f0e8',o:'#c0d8c0',J:'#555',F:'#222'};
 const PAL_P1={R:'#444',S:'#cfa07c',E:'#222',D:'#cfa07c',O:'#5c5c66',o:'#4a4a52',J:'#333',F:'#111'};
@@ -299,7 +302,19 @@ function drawChar(who,x,y,dir,frame,pose,s,pal){
  const rows=top.concat(legs);const h=rows.length*s;
  ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(x-5*s,y-s,10*s,2*s);
  drawPat(rows,pal||(who==='n'?PAL_N:PAL_R),x-6*s,y-h,s,flip);
+ if(who==='n'&&dir==='down'){const u=s/2,cx=x,cy=y-h+10.5*s;const pc=(pal||PAL_N).P;R(cx-u,cy-1.5*u,2*u,3*u,pc);R(cx-1.5*u,cy-u,3*u,2*u,pc);R(cx-u,cy-u,u,u,'#fff2b0');}
 }
+/* приватная поза: спиной, сидя, за дверцей кабинки — без натурализма */
+function drawPrivacy(kind){
+ const x0=100,y0=22,w=120,h=124;
+ R(x0-3,y0-3,w+6,h+6,'#fff');R(x0,y0,w,h,kind==='hosp'?'#cfe0e6':'#cfe0e6');
+ for(let x=x0;x<x0+w;x+=12)R(x,y0,1,h,'#b8ccd4');for(let y=y0+10;y<y0+h;y+=12)R(x0,y,w,1,'#b8ccd4');
+ R(x0,y0+h-24,w,24,'#e6eef0');
+ if(kind==='sample'){R(x0+82,y0+34,10,12,'#f8f8f0');R(x0+82,y0+34,10,3,'#e8c84a');}
+ drawChar('n',x0+w/2,y0+h-12,'up',0,'sit',3,nPal());
+ R(x0+8,y0+h-44,w-16,40,'#8e7a63');R(x0+8,y0+h-44,w-16,3,'#a8927a');R(x0+w-20,y0+h-26,3,3,'#e0c070');
+}
+function privacy(kind,fn){return (async()=>{S.dim=1;S.priv=kind;try{await fn();}finally{S.dim=0;S.priv=null;}})();}
 function nPal(){return S.hoodie?PAL_NH:PAL_N;}
 function rPal(){return S.hoodie?PAL_R2:PAL_R;}
 
@@ -461,7 +476,7 @@ function drawTaxi(dawn){
  R(24,22,272,6,'#1a1820');R(24,110,272,6,'#1a1820');R(24,22,6,94,'#1a1820');R(290,22,6,94,'#1a1820');R(158,22,4,94,'#1a1820');
  R(10,116,300,100,'#3a2f30');for(let x=30;x<310;x+=40)R(x,118,2,80,'#2e2526');R(10,196,300,44,'#221c1e');
  drawChar('n',112,160,'right',0,'sit',3,nPal());
- if(!dawn){R(128,116,6,14,'#7fb6e0');R(129,112,4,4,'#3a6ea8');}else{R(98,138,30,8,'#9b6a42');R(126,116,10,8,'#f4f4f4');R(126,119,10,2,'#c03a3a');}
+ if(!dawn){R(128,116,6,14,'#7fb6e0');R(129,112,4,4,'#3a6ea8');}else{R(126,116,10,8,'#f4f4f4');R(126,119,10,2,'#c03a3a');}
  drawChar('r',196,160,'left',0,'sit',3,rPal());
  R(66,142,26,18,'#6b4b2b');R(71,138,16,5,'#563a20');
  R(140,4,40,12,'#222');R(143,6,34,8,'#445');drawPat(RS.front.slice(3,6),PAL_DRV,150,6,1.4,false);
@@ -484,7 +499,7 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
   {n:'Окно',r:[184,10,62,56],act:()=>say(null,F.curtain?['* Штора задвинута. За ней светает без меня.']:['* За стеклом светает.','* Фрибур уже не далеко и не «когда-нибудь». Он был сегодня.'])},
   {n:'Полочка',r:[124,26,54,40],act:()=>say(null,['* На полочке теперь не остатки фурагина, а нормальное лечение.'])},
   {n:'Сумка',r:[52,122,34,30],act:()=>say(null,['* Сумка снова у кровати. Руслан донёс её, как обещал.'])},
-  {n:'Туалет',r:[270,10,40,56],act:()=>say(null,['* Снова.','* Тело не спрашивает, удобно ли мне сейчас.','* Но теперь у меня есть курс.'])},
+  {n:'Туалет',r:[270,10,40,56],act:()=>privacy('home',()=>say(null,['* Снова.','* Тело не спрашивает, удобно ли мне сейчас.','* Но теперь у меня есть курс.']))},
   {n:'Дверь',r:[136,222,48,24],act:()=>say(null,['* Хватит дорог на сегодня.'])}
  ]:[
   {n:'Кровать',r:[16,58,96,62],act:async()=>{
@@ -494,7 +509,7 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
   {n:'Бутылка воды',r:[108,40,28,58],on:()=>!F.bag.water,act:async()=>{
     if(!F.q[4]){
       const i=await choose(['Выпить и взять бутылку в сумку','Только выпить','Потом']);
-      if(i===2){await say(null,['* Бутылка остаётся на тумбочке. Я могу взять её позже.']);return;}
+      if(i<0||i===2){if(i===2)await say(null,['* Бутылка остаётся на тумбочке. Я могу взять её позже.']);return;}
       await say(null,L.drinkN);await say('Руслан',L.drinkR);F.drank=true;quest(4);
       if(i===0){F.bag.water=true;await say(null,['* Бутылку — в сумку. Пригодится в дороге.']);await checkBag();}
       else await say(null,['* Воду я выпила. Пустую бутылку пока оставляю — в сумку можно положить потом.']);
@@ -558,6 +573,7 @@ SC.room={walk:true,draw:drawRoom,bounds:[10,62,300,168],
  ],
  rusAct:async()=>{
   if(F.r2){const i=await choose(['Поговорить','Обнять его','Попросить задвинуть штору','Осмотреть Руслана']);
+   if(i<0)return;
    if(i===0)await say('Руслан',L.table);
    else if(i===1){F.hug=true;await say(null,['* Я обнимаю его. Он выдыхает мне в макушку.']);await say('Руслан',['* Зайка моя, я здесь.']);}
    else if(i===2){F.curtain=true;await say(null,['* Руслан задвигает штору. В комнате становится мягко и темно.']);await say('Руслан',['* Я никуда не уйду.']);}
@@ -572,8 +588,8 @@ SC.bath={walk:true,draw:drawBath,bounds:[100,66,120,164],walls:()=>[[166,60,28,3
  setup(){S.rus.vis=false;},
  objs:()=>[
   {n:'Туалет',r:[162,56,36,42],act:async()=>{
-    if(!F.q[2]){S.dim=1;await say(null,L.toilet);S.dim=0;quest(2);F.needRusToilet=true;}
-    else{S.dim=1;await say(null,L.toiletAgain);S.dim=0;}}},
+    if(!F.q[2]){await say(null,L.toilet.slice(0,3));await privacy('home',()=>say(null,L.toilet.slice(3)));quest(2);F.needRusToilet=true;}
+    else await privacy('home',()=>say(null,L.toiletAgain));}},
   {n:'Зеркало',r:[112,14,44,70],act:()=>say(null,L.mirror)},
   {n:'Дверь',r:[136,222,48,24],act:async()=>{await go('room',290,74,'down',true);S.rus.vis=true;if(F.needRusToilet){F.needRusToilet=false;await say('Руслан',L.toiletRus);}}}
  ]};
@@ -598,6 +614,7 @@ SC.street={walk:true,draw:drawStreet,bounds:[0,124,320,76],walls:()=>[[146,150,8
  rusAct:()=>rusPause()};
 async function taxiCall(){
  const i=await choose(['Поднять руку у края дороги','Вызвать машину в телефоне','Посмотреть на дорогу','Посмотреть в телефон']);
+ if(i<0)return;
  if(i===2){await say(null,['* Мокрый асфальт блестит. Машин почти нет. Но одна нам нужна.']);return;}
  if(i===3){await say(null,['* На экране время, на которое лучше не смотреть. И приложение такси.']);return;}
  await say(null,[i===0?'* Я поднимаю руку. Через минуту у бордюра тормозит машина.':'* Я вызываю такси в телефоне. Пальцы мёрзнут. Машина приезжает быстро.']);
@@ -610,9 +627,10 @@ SC.taxi1={walk:false,draw:()=>drawTaxi(false),
  enter:async()=>{
   await say(null,L.taxiBg);let acts=0,asked=false,ti=0;
   for(;;){const i=await choose(['Поговорить с Русланом','Смотреть в окно','Пить воду','Молчать','Ехать дальше']);
+   if(i<0)continue;
    if(i===0){if(ti<L.taxiTalk.length)await say('Руслан',L.taxiTalk[ti++]);else await rusPause();acts++;}
    else if(i===1){await say(null,L.taxiWin);await say('Руслан',L.taxiWinR);acts++;}
-   else if(i===2){await say(null,L.taxiWater);await say('Руслан',L.taxiWaterR);acts++;}
+   else if(i===2){await say(null,L.taxiWater);await say('Руслан',L.taxiWaterR);F.drank=true;acts++;}
    else if(i===3){await say('Руслан',L.taxiSilent);acts++;}
    else{if(acts<2){await say(null,['* Дорога ещё длинная. Мы только выехали.']);continue;}break;}
    if(acts>=2&&!asked){asked=true;await say('Водитель',['* Там сзади всё в порядке?']);const j=await choose(['Ответить самой','Пусть ответит Руслан']);await say(j===0?'Ника':'Руслан',L.driverOk);if(j===0)F.spoke=true;}
@@ -626,6 +644,7 @@ SC.hall={walk:true,draw:drawHall,bounds:[8,60,304,168],walls:()=>[[18,56,90,36],
     if(F.q[8]){await say(null,['* Регистратор уже записал меня. Теперь ждать.']);return;}
     await say('Регистратор',['* Здравствуйте. Что случилось?']);
     const i=await choose(['Коротко и прямо: боль, кровь, поясница','Тихо и путано','«Мне просто плохо»']);
+    if(i<0)return;
     if(i===0){F.spoke=true;await say('Ника',['* Мне больно, когда я хожу в туалет. Там кровь. И болит поясница.']);}
     else if(i===1){await say('Ника',['* Я... там... ну, больно. И ещё... ']);await say('Руслан',L.recHelp);}
     else{await say('Ника',['* Мне просто плохо.']);await say('Регистратор',['* Что именно беспокоит?']);await say('Руслан',L.recHelp);}
@@ -636,7 +655,7 @@ SC.hall={walk:true,draw:drawHall,bounds:[8,60,304,168],walls:()=>[[18,56,90,36],
     S.rus.mode='hidden';await go('cab',60,214,'up');}},
   {n:'Автомат с водой',r:[210,36,34,56],act:async()=>{await say(null,['* Пластиковый стаканчик. Вода из автомата холодная.','* Я пью маленькими глотками.']);await say('Руслан',['* Воду. Хотя бы несколько глотков.']);}},
   {n:'Окно аптеки',r:[246,8,42,60],act:pharmacy},
-  {n:'Туалет',r:[290,8,26,60],act:async()=>{S.dim=1;await say(null,L.hospToilet);S.dim=0;}},
+  {n:'Туалет',r:[290,8,26,60],act:()=>privacy('hosp',()=>say(null,L.hospToilet))},
   {n:'Стулья',r:[56,128,148,32],act:async()=>{
     if(!F.q[8]){await say(null,['* Сначала регистратура.']);return;}
     if(F.called){await say(null,['* Меня уже вызвали.']);return;}
@@ -656,6 +675,7 @@ async function pharmacy(){
  if(F.q[10]){await say(null,['* Коробочка у меня. Можно домой.']);return;}
  await say('Сотрудник аптеки',L.phStaff);
  const i=await choose(['Взять пакет','У меня дрожат руки','Замереть над коробкой']);
+ if(i<0)return;
  if(i===0){await say(null,L.phBox);await say('Руслан',L.phRus.slice(1));}
  else if(i===1){await say(null,['* Руки дрожат. Руслан берёт пакет и сразу отдаёт мне — чтобы это было моё лекарство, не его трофей.']);await say(null,L.phBox);await say('Руслан',L.phRus);}
  else{await say(null,L.phBox);await say(null,['* Я замираю над коробкой.']);await say('Руслан',L.phFreeze);}
@@ -664,7 +684,7 @@ async function pharmacy(){
 SC.cab={walk:true,draw:drawCab,bounds:[20,62,280,166],walls:()=>[[30,62,72,32],[148,62,62,26],[228,62,64,32],[124,98,16,10]],
  setup(){S.rus.mode='static';S.rus.vis=!!F.rusIn;S.rus.x=60;S.rus.y=226;S.rus.dir='up';S.rus.pose='stand';},
  enter:async()=>{if(F.cabSeen)return;F.cabSeen=true;await say('Медсестра',L.nurse);await say('Руслан',L.rusDoor);},
- npcDraw:()=>drawChar('r',132,108,'down',0,'stand',2,PAL_NUR),
+ npcDraw:()=>drawNurse(132,108,2),
  objs:()=>[
   {n:'Медсестра',r:[118,80,30,36],act:()=>say('Медсестра',F.q[9]?['* Спасибо. Дальше — к врачу.']:['* Туалет напротив. Контейнер вот. Подпишите.','* Ничего страшного. Как получится.'])},
   {n:'Контейнер',r:[144,44,70,50],act:()=>say(null,F.q[9]?['* Контейнер уже подписан и отдан.']:['* Контейнер для анализа. Я пишу на этикетке своё имя.'])},
@@ -673,7 +693,7 @@ SC.cab={walk:true,draw:drawCab,bounds:[20,62,280,166],walls:()=>[[30,62,72,32],[
   {n:'Врач',r:[224,58,72,42],act:doctor},
   {n:'Туалет',r:[236,222,48,24],act:async()=>{
     if(F.q[9]){await say(null,['* Анализ уже сдан.']);return;}
-    S.dim=1;await say(null,L.analysis);S.dim=0;quest(9);}},
+    await privacy('sample',()=>say(null,L.analysis));quest(9);}},
   {n:'В холл',r:[36,222,48,24],act:async()=>{
     if(F.q[9]&&!F.prescribed){await say(null,['* Сначала врач.']);return;}
     S.rus.mode='follow';await go('hall',190,74,'down');}}
@@ -694,6 +714,7 @@ SC.taxi2={walk:false,draw:()=>drawTaxi(true),
  enter:async()=>{
   await say(null,L.back);let ti=0,acts=0;
   for(;;){const i=await choose(['Поговорить с Русланом','Поблагодарить его','Смотреть в окно','Ехать дальше']);
+   if(i<0)continue;
    if(i===0){if(ti<L.backTalk.length)await say('Руслан',L.backTalk[ti++]);else await rusPause();acts++;}
    else if(i===1){F.thanked=true;await say('Ника',['* Спасибо, что поехал со мной.']);await say('Руслан',L.thanks);acts++;}
    else if(i===2){await say(null,L.backWin);acts++;}
@@ -708,21 +729,76 @@ async function ending(){
  await fadeOut();S.pose='lie';S.px=60;S.py=100;S.rus.x=98;S.rus.y=140;S.rus.pose='sit';S.rus.dir='down';S.rus.mode='static';S.rus.vis=true;F.curtain=true;S.control=false;
  await fadeIn();quest(12);
  await say(null,L.end1);await say('Руслан',L.end2);await say(null,L.end3);
- const warm=F.talked&&F.drank&&!F.hid&&F.thanked;
+ const warm=F.talked&&F.drank&&!F.hid&&(F.thanked||F.hug);
  if(warm){await say('Руслан',L.warmR);await say(null,L.warmN);}
  await say(null,L.fin);
  await fadeOut();
- const tt=$('title');tt.innerHTML='<div class="heart">&#10084;</div><h1>НЕ ТЕРПИ</h1><div class="sub">Конец.</div><div class="ctl">'+(warm?'Тёплый финал':'Обычный финал')+'<br>'+(warm?'':'(тёплый: поговорить с Русланом, выпить воды, не прятаться в кровать в начале, поблагодарить его)<br>')+'Задачи: '+F.q.filter(Boolean).length+' / 12</div><div class="go">[ Z / Enter — сыграть снова ]</div>';
+ const tt=$('title');tt.innerHTML='<div class="heart">&#10084;</div><h1>НЕ ТЕРПИ</h1><div class="sub">Конец.</div><div class="ctl">'+(warm?'Тёплый финал':'Обычный финал')+'<br>'+(warm?'':'(тёплый: поговорить с Русланом, выпить воды, не прятаться в кровать в начале, поблагодарить или обнять его)<br>')+'Задачи: '+F.q.filter(Boolean).length+' / 12</div><div class="go">[ Z / Enter — сыграть снова ]</div>';
  tt.classList.remove('hidden');$('hud').classList.add('hidden');$('hint').classList.add('hidden');G.started=false;fadeEl.style.opacity=0;
 }
 
 /* ================= МЕНЮ ================= */
 async function openMenu(){
- const o=['Задачи','Осмотреть себя'];if(S.hoodie&&S.scene==='room'&&F.r2)o.push('Снять его толстовку');o.push('Закрыть');
- const i=await choose(o);const s=o[i];
- if(s==='Задачи'){const c=curQuest();let h='<h2>Задачи</h2>';for(let k=1;k<=12;k++)h+='<div class="q '+(F.q[k]?'done':(k===c?'cur':''))+'">'+(F.q[k]?'✓ ':(k===c?'▶ ':'· '))+k+'. '+QN[k]+'</div>';h+='<div class="foot">Дверь из комнаты откроется, когда выполнены задачи 1–5. Z — закрыть.</div>';await showPanel(h);}
+ const o=['Вещи','Задачи','Осмотреть себя'];if(S.hoodie&&S.scene==='room'&&F.r2)o.push('Снять его толстовку');o.push('Закрыть');
+ const i=await choose(o);if(i<0)return;const s=o[i];S.idle=0;
+ if(s==='Вещи')await openBag();
+ else if(s==='Задачи'){const c=curQuest();let h='<h2>Задачи</h2>';for(let k=1;k<=12;k++)h+='<div class="q '+(F.q[k]?'done':(k===c?'cur':''))+'">'+(F.q[k]?'✓ ':(k===c?'▶ ':'· '))+k+'. '+QN[k]+'</div>';h+='<div class="foot">Дверь из комнаты откроется, когда выполнены задачи 1–5. Z / X / I — закрыть.</div>';await showPanel(h);}
  else if(s==='Осмотреть себя'){const l=L.self.slice();if(S.hoodie)l.push('* Поверх рубашки — его коричневая толстовка. Рукава длиннее моих рук.');await say(null,l);}
  else if(s==='Снять его толстовку'){S.hoodie=false;F.hoodieOnChair=true;await say(null,['* Я снимаю его толстовку и вешаю на спинку стула. Ворот белой рубашки под ней совсем смялся.']);}
+}
+/* ---------- вещи ---------- */
+const rusNear=()=>S.scene==='taxi1'||S.scene==='taxi2'||(S.rus.vis&&S.rus.mode!=='hidden'&&S.scene!=='bath');
+function bagItems(){
+ const b=F.bag,it=[];
+ if(b.water)it.push({n:'Вода',
+  ex:()=>say(null,F.waterSips>=3?['* Бутылка почти пустая. Осталось на пару глотков.']:['* Бутылка воды из комнаты. Тёплая, но вода есть.','* Руслан говорит пить, даже когда страшно.']),
+  use:async()=>{
+   if(!F.drank){F.drank=true;quest(4);await say(null,L.drinkN);return;}
+   F.waterSips=(F.waterSips||0)+1;
+   await say(null,['* Глоток. Ещё один.','* Тело благодарно и сразу предупреждает: скоро мне снова понадобится туалет.']);
+   if(rusNear())await say('Руслан',['* Хорошо. Так и надо.']);}});
+ if(b.meds){
+  it.push({n:F.ibuTaken?'Ибупрофен (уже выпила)':'Ибупрофен',
+   ex:()=>say(null,['* Блистер ибупрофена. Его ещё хватает.','* Он снимет край боли. Но не причину.']),
+   use:async()=>{
+    if(F.ibuTaken){await say(null,['* Я уже выпила одну. Больше пока не надо — лучше дождаться врача.']);return;}
+    F.ibuTaken=true;
+    await say(null,['* Я выдавливаю одну таблетку ибупрофена и запиваю водой.','* Ничего не проходит сразу. Но через какое-то время край боли становится чуть мягче.']);
+    if(rusNear())await say('Руслан',['* Правильно, зайка. Это снимет край.','* А причину будем лечить в HFR.']);}});
+  it.push({n:'Фурагин',
+   ex:()=>say(null,['* Почти пустой блистер фурагина.','* Это уже не курс. Это остатки моей надежды, что «ещё чуть-чуть, и пройдёт».']),
+   use:()=>say(null,F.prescribed?['* Врач выписал мне нормальные антибиотики. Остатки фурагина больше не нужны.']:['* Тут на пару раз, не больше. Это не лечение.','* Я убираю блистер обратно. Мне нужны нормальные антибиотики и настоящий приём.'])});
+ }
+ if(b.docs)it.push({n:'Документы',
+  ex:()=>say(null,['* Документы, телефон, зарядка и кошелёк.','* Всё, что нужно, чтобы меня записали на приём.']),
+  use:()=>say(null,F.q[8]?['* Меня уже записали. Документы снова в сумке.']:(S.scene==='hall'?['* Документы у меня в руке. Осталось дойти до регистратуры и сказать, как есть.']:['* Я проверяю: документы на месте. Пригодятся в регистратуре.']))});
+ if(b.sweater)it.push({n:'Кофта',
+  ex:()=>say(null,['* Моя тёплая кофта. Я взяла её на всякий случай.']),
+  use:()=>say(null,S.hoodie?['* Сейчас на мне его коричневая толстовка. Кофту оставлю в сумке.']:['* Пока я не мёрзну. Если на улице будет холодно — кофта в сумке.'])});
+ if(S.hoodie)it.push({n:'Его толстовка',
+  ex:()=>say(null,['* Коричневая толстовка Руслана. От неё пахнет им.','* Рукава длиннее моих рук.']),
+  use:()=>say(null,(S.scene==='room'&&F.r2)?['* Можно снять её через «Снять его толстовку» в меню. Или остаться в ней ещё чуть-чуть.']:['* Я кутаюсь в его толстовку плотнее. На плечах становится теплее — и как-то спокойнее в груди.'])});
+ if(F.q[10])it.push({n:F.pill?'Антибиотики (первая выпита)':'Антибиотики',
+  ex:()=>say(null,['* Коробочка лёгкая. Слишком лёгкая для всей этой ночи.','* Курс как указано. Не бросать на середине, даже если станет легче.']),
+  use:async()=>{
+   if(F.pill){await say(null,['* Первую я уже выпила. Следующая — завтра, по курсу.']);return;}
+   if(!(F.r2&&S.scene==='room')){await say(null,['* Первую — как только окажемся в комнате. Мы так договорились.']);return;}
+   F.glass=true;F.pill=true;await say(null,L.pill);
+   await say(null,['* Теперь можно лечь.']);}});
+ return it;
+}
+async function openBag(){
+ const it=bagItems();
+ if(!it.length){await say(null,['* В сумке пока ничего полезного. Мне ещё нужно собраться.']);return;}
+ for(;;){
+  const names=bagItems().map(x=>x.n);names.push('Назад');
+  const i=await choose(names,'* Вещи');if(i<0||i===names.length-1)return;
+  const item=bagItems()[i];
+  const j=await choose(['Осмотреть','Использовать','Назад'],'* '+item.n);
+  if(j<0||j===2)continue;
+  S.idle=0;
+  if(j===0)await item.ex();else await item.use();
+ }
 }
 
 /* ================= ИГРОВОЙ ЦИКЛ ================= */
@@ -730,16 +806,15 @@ function rectHit(x,y,r){return x>=r[0]&&x<=r[0]+r[2]&&y>=r[1]&&y<=r[1]+r[3];}
 function blocked(x,y){const sc=SC[S.scene],b=sc.bounds;if(x-7<b[0]||x+7>b[0]+b[2]||y-6<b[1]||y>b[1]+b[3])return true;
  for(const w of sc.walls())if(x+7>w[0]&&x-7<w[0]+w[2]&&y>w[1]&&y-6<w[1]+w[3])return true;return false;}
 function findTarget(){
- const sc=SC[S.scene];if(!sc.walk)return null;const v=DV[S.dir];const fx=S.px+v[0]*14,fy=S.py-4+v[1]*14;
- if(S.rus.vis&&S.rus.mode!=='hidden'&&sc.rusAct){const d1=Math.hypot(fx-S.rus.x,fy-(S.rus.y-8)),d2=Math.hypot(S.px-S.rus.x,S.py-S.rus.y);if(d1<16||d2<22)return{n:'Руслан',act:sc.rusAct};}
- let best=null,bestD=1e9;
- for(const o of sc.objs()){
-  if(o.on&&!o.on())continue;
-  if(!rectHit(fx,fy,o.r))continue;
-  const cx=o.r[0]+o.r[2]/2,cy=o.r[1]+o.r[3]/2,d=Math.hypot(fx-cx,fy-cy);
-  if(d<bestD){best=o;bestD=d;}
+ const sc=SC[S.scene];if(!sc.walk)return null;
+ const v=DV[S.dir];const fx=S.px+v[0]*14,fy=S.py-4+v[1]*14;
+ for(const o of sc.objs())if((!o.on||o.on())&&rectHit(fx,fy,o.r))return o;
+ if(S.rus.vis&&S.rus.mode!=='hidden'&&sc.rusAct){
+  const d1=Math.hypot(fx-S.rus.x,fy-(S.rus.y-8));
+  if(d1<16)return{n:'Руслан',act:sc.rusAct};
  }
- return best;}
+ return null;
+}
 function interact(){const t=findTarget();if(t)run(t.act);}
 function startGame(){resetState();fadeEl.style.opacity=1;run(async()=>{
  S.scene='room';await fadeIn();await say(null,L.start);S.pose='stand';S.px=124;S.py=150;S.dir='left';S.control=true;$('hud').classList.remove('hidden');});}
@@ -747,7 +822,7 @@ function update(){
  S.t++;const sc=SC[S.scene];
  if(S.control&&!busy&&!D&&!panelRes&&sc.walk&&S.pose==='stand'){
   let dx=0,dy=0;if(keys.left)dx-=1;if(keys.right)dx+=1;if(keys.up)dy-=1;if(keys.down)dy+=1;
-  if(dx||dy){const sp=1.6;if(dx&&dy){dx*=.72;dy*=.72;}
+  if(dx||dy){S.idle=0;const sp=1.6;if(dx&&dy){dx*=.72;dy*=.72;}
    if(dy)S.dir=dy<0?'up':'down';if(dx&&(!dy||Math.abs(dx)>=Math.abs(dy)))S.dir=dx<0?'left':'right';
    const nx=S.px+dx*sp,ny=S.py+dy*sp;if(!blocked(nx,S.py))S.px=nx;if(!blocked(S.px,ny))S.py=ny;
    S.ft++;S.frame=(S.ft>>3)&1;S.trail.push({x:S.px,y:S.py});if(S.trail.length>60)S.trail.shift();
@@ -776,7 +851,7 @@ function draw(){
   ents.sort((a,b)=>a.y-b.y).forEach(e=>e.f());
   if(S.scene==='room'&&S.pose==='lie'){/* поза лёжа нарисована в комнате */}
  }
- if(S.dim){ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,0,320,240);}
+ if(S.dim){ctx.fillStyle='rgba(0,0,0,.72)';ctx.fillRect(0,0,320,240);if(S.priv)drawPrivacy(S.priv);}
  if(F.r2&&S.scene==='room'&&F.curtain&&S.pose==='lie'){ctx.fillStyle='rgba(10,10,40,.35)';ctx.fillRect(0,0,320,240);}
 }
 function loop(){try{update();draw();}catch(e){console.error(e);}requestAnimationFrame(loop);}
